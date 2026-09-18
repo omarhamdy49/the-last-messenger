@@ -60,10 +60,6 @@ deptrac:
       - App\Jobs\RecordMediaViewJob
     App\Domain\Media\Services\YouTubeSyncService:
       - App\Jobs\SyncYouTubePlaylistJob
-    App\Domain\Quran\DTOs\CreateReciterData:
-      - App\Http\Requests\Admin\StoreReciterRequest
-    App\Domain\Quran\DTOs\UpdateReciterData:
-      - App\Http\Requests\Admin\UpdateReciterRequest
     App\Domain\Seerah\Models\SeerahEvent:
       - App\Models\User
     App\Domain\Shared\Enums\SearchModule:
@@ -106,8 +102,9 @@ deptrac:
       - App\Domain\Media\Models\MediaEpisode
       - App\Domain\Media\Models\MediaProgram
       - App\Domain\People\Models\Muslim
-      - App\Domain\Quran\Models\Reciter
-      - App\Domain\Quran\Models\Surah
+      - App\Domain\Quran\Enums\ResourceKind
+      - App\Domain\Quran\Models\Chapter
+      - App\Domain\Quran\Models\QuranResource
       - App\Domain\Quran\Models\Verse
       - App\Domain\Seerah\Models\SeerahEvent
       - App\Models\Article

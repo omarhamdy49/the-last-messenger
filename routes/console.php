@@ -160,3 +160,16 @@ Schedule::command('media:compute-trending')
 
 // quran:ai-prune (prunes Ask Quran inquiries + stale quota rows) is manual-only
 // too — see Settings → Commands. It takes --dry-run, so preview before deleting.
+
+/**
+ * Quran Foundation Content Sync (006): applies only changes since the last run for
+ * every enabled translation, tafsir, word-by-word resource and active mushaf. The
+ * sync token only advances after a fully applied run, so a failed night repeats.
+ */
+Schedule::command('quran:qf:sync')
+    ->dailyAt((string) config('quran.sync.schedule', '03:15'))
+    ->withoutOverlapping(120)
+    ->runInBackground()
+    ->onFailure(function () {
+        Log::error('Quran Foundation content sync failed; see quran_sync_runs');
+    });

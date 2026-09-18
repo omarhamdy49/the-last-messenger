@@ -9,8 +9,9 @@ use App\Domain\Media\Models\LiveChannel;
 use App\Domain\Media\Models\MediaEpisode;
 use App\Domain\Media\Models\MediaProgram;
 use App\Domain\People\Models\Muslim;
-use App\Domain\Quran\Models\Reciter;
-use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Enums\ResourceKind;
+use App\Domain\Quran\Models\Chapter;
+use App\Domain\Quran\Models\QuranResource;
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Models\AdminLog;
@@ -115,9 +116,9 @@ class AnalyticsService
                             'total' => $query(Muslim::class)->count(),
                         ],
                         'quran' => [
-                            'surahs' => Surah::count(),
+                            'surahs' => Chapter::count(),
                             'verses' => Verse::count(),
-                            'reciters' => $query(Reciter::class)->count(),
+                            'reciters' => QuranResource::query()->whereIn('kind', [ResourceKind::CHAPTER_RECITER, ResourceKind::RECITATION])->count(),
                         ],
                         'genealogy' => [
                             'people' => $query(Muslim::class)->count(),
@@ -357,22 +358,22 @@ class AnalyticsService
                             'favorites' => (int) ($item->favorites_count ?? 0),
                             'created_at' => $item->created_at->format('Y-m-d'),
                         ]),
-                    // Reciter names live in reciter_translations (there is no
-                    // `name` column) and the sort column is `display_order`;
-                    // the previous `name`/`order` references threw and the
-                    // catch below emptied the whole payload.
-                    'reciters' => Reciter::query()
+                    // Reciter names live in quran_resource_translations (there is
+                    // no `name` column on the translation table) and the sort
+                    // column is `display_order`.
+                    'reciters' => QuranResource::query()
                         ->with('translations')
+                        ->whereIn('kind', [ResourceKind::CHAPTER_RECITER, ResourceKind::RECITATION])
                         ->orderByDesc('display_order')
                         ->take($limit)
-                        ->get(['id', 'slug', 'style', 'is_featured'])
+                        ->get(['id', 'slug', 'style', 'is_default'])
                         ->map(fn ($item) => [
                             'id' => $item->id,
                             'name' => $item->getTranslation('name', 'ar')
                                 ?? $item->getTranslation('name', 'en')
                                 ?? 'Unknown',
-                            'style' => $item->style,
-                            'is_featured' => $item->is_featured,
+                            'style' => $item->style?->value,
+                            'is_featured' => $item->is_default,
                         ]),
                 ];
             } catch (\Throwable $e) {

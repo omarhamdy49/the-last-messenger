@@ -4,13 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Api;
 
-use App\Domain\Quran\Models\Surah;
-use App\Domain\Quran\Models\TranslationResource as TranslationEdition;
+use App\Domain\Quran\Models\Chapter;
+use App\Domain\Quran\Models\QuranResource;
+use App\Domain\Quran\Models\Translation;
 use App\Domain\Quran\Models\Verse;
-use App\Domain\Quran\Models\VerseTranslation;
 use App\Domain\Shared\Models\SavedFilter;
-use App\Http\Resources\SurahResource;
-use App\Http\Resources\TranslationResource;
 use App\Models\Article;
 use App\Models\ArticleLocale;
 use App\Models\User;
@@ -30,85 +28,40 @@ class ShippedBugRegressionTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function makeSurah(int $revelationOrder = 5): Surah
-    {
-        return Surah::create([
-            'revelation_place' => 'makkah',
-            'revelation_order' => $revelationOrder,
-            'bismillah_pre' => true,
-            'name_ar' => 'الفاتحة',
-            'name_en' => 'Al-Fatihah',
-            'transliteration' => 'Al-Fatihah',
-            'verses_count' => 7,
-        ]);
-    }
-
     /**
      * SurahResource emitted `revelation_order` as `number`, so Al-Fatihah (id 1,
-     * revelation_order 5) reported number 5 to every consumer. The surah number is the id.
+     * revelation_order 5) reported number 5 to every consumer. The chapter number is
+     * the id, and since 006 it is the primary key, so the two can no longer diverge.
      */
-    public function test_surah_resource_reports_the_id_as_the_number(): void
+    public function test_chapter_payload_reports_the_id_as_the_number(): void
     {
-        $surah = $this->makeSurah(revelationOrder: 5);
+        Sanctum::actingAs(User::factory()->create(), ['api:access']);
+        Chapter::factory()->number(1)->create(['revelation_order' => 5]);
 
-        $payload = (new SurahResource($surah))->resolve(Request::create('/'));
-
-        $this->assertSame($surah->id, $payload['number']);
-        $this->assertSame(5, $payload['revelation_order']);
-        $this->assertNotSame(
-            $payload['revelation_order'],
-            $payload['number'],
-            'number must be the surah id, not its revelation order'
-        );
+        $this->getJson('/api/v1/quran/chapters/1')
+            ->assertOk()
+            ->assertJsonPath('data.chapter.id', 1)
+            ->assertJsonPath('data.chapter.revelation_order', 5);
     }
 
     /**
      * TranslationResource read `$this->resource->getName()`. Inside a JsonResource,
      * `$this->resource` is Laravel's reserved property holding the wrapped model — the
-     * VerseTranslation — not the `resource()` belongsTo. VerseTranslation has no
-     * getName(), so this raised BadMethodCallException and four Quran endpoints 500'd.
+     * translation row — not the `resource()` belongsTo, so four Quran endpoints 500'd.
+     * The QF-shaped payload names its resource inline; assert the values, not the shape.
      */
-    public function test_translation_resource_serialises_its_edition(): void
+    public function test_verse_translation_names_its_resource(): void
     {
-        $surah = $this->makeSurah();
+        Sanctum::actingAs(User::factory()->create(), ['api:access']);
+        Chapter::factory()->number(1)->withVerses(1)->create();
+        $resource = QuranResource::factory()->translation('en')->asDefault()->create(['name' => 'Sahih International', 'slug' => 'sahih-international']);
+        Translation::factory()->create(['resource_id' => $resource->id, 'verse_id' => Verse::query()->value('id'), 'text' => 'In the name of Allah']);
 
-        $verse = Verse::create([
-            'surah_id' => $surah->id,
-            'verse_number' => 1,
-            'verse_key' => "{$surah->id}:1",
-            'juz_number' => 1,
-            'hizb_number' => 1,
-            'rub_el_hizb_number' => 1,
-            'ruku_number' => 1,
-            'manzil_number' => 1,
-            'page_number' => 1,
-        ]);
-
-        $edition = TranslationEdition::create([
-            'slug' => 'sahih-international',
-            'name' => ['en' => 'Sahih International', 'ar' => 'صحيح انترناشونال'],
-            'language' => 'en',
-            'is_default' => true,
-            'is_active' => true,
-        ]);
-
-        $translation = VerseTranslation::create([
-            'verse_id' => $verse->id,
-            'resource_id' => $edition->id,
-            'lang' => 'en',
-            'text' => 'In the name of Allah',
-        ]);
-
-        $payload = (new TranslationResource($translation->load('resource')))
-            ->resolve(Request::create('/'));
-
-        $this->assertIsArray($payload['edition']);
-        $this->assertSame($edition->id, $payload['edition']['id']);
-        $this->assertSame('sahih-international', $payload['edition']['slug']);
-        // getName() reads name[locale] with slug as last resort — a null here would mean
-        // the eager load dropped `name`/`slug` again.
-        $this->assertSame('صحيح انترناشونال', $payload['edition']['name']);
-        $this->assertSame('en', $payload['edition']['language']);
+        $this->getJson("/api/v1/quran/verses/by_key/1:1?translations={$resource->id}")
+            ->assertOk()
+            ->assertJsonPath('data.verse.translations.0.resource_id', $resource->id)
+            ->assertJsonPath('data.verse.translations.0.resource_name', 'Sahih International')
+            ->assertJsonPath('data.verse.translations.0.text', 'In the name of Allah');
     }
 
     /**

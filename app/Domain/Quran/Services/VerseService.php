@@ -4,215 +4,62 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Services;
 
+use App\Domain\Quran\DTOs\VerseEditData;
+use App\Domain\Quran\Models\Chapter;
 use App\Domain\Quran\Models\Verse;
+use App\Domain\Quran\Repositories\ChapterRepositoryInterface;
 use App\Domain\Quran\Repositories\VerseRepositoryInterface;
-use App\Domain\Shared\Services\BaseService;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 
 /**
- * Verse Service
- * Handles business logic for Quran verses (ayahs)
- *
- * @extends BaseService<VerseRepositoryInterface>
+ * Verse administration (the corpus itself is never created or deleted here).
  */
-class VerseService extends BaseService
+final class VerseService
 {
+    public function __construct(
+        private readonly VerseRepositoryInterface $verses,
+        private readonly ChapterRepositoryInterface $chapters,
+    ) {}
+
     /**
-     * Constructor
+     * @param  array{chapter?: int|null, juz?: int|null, page?: int|null, sajdah?: bool|null, locked?: bool|null, q?: string|null}  $filters
+     * @return array{verses: LengthAwarePaginator, chapters: Collection<int, Chapter>}
      */
-    public function __construct(VerseRepositoryInterface $repository)
+    public function adminIndex(array $filters, int $perPage): array
     {
-        $this->repository = $repository;
+        return ['verses' => $this->verses->paginateAdmin($filters, $perPage), 'chapters' => $this->chapters->all(false)];
     }
 
-    /**
-     * Get paginated verses with optional search and filters
-     *
-     * @param  array<string, mixed>  $filters
-     */
-    public function paginateWithFilters(
-        int $perPage = 15,
-        string $search = '',
-        string $sortBy = 'verse_key',
-        array $filters = []
-    ): LengthAwarePaginator {
-        /** @var VerseRepositoryInterface */
-        $repo = $this->repository;
-
-        return $repo->paginateWithFilters($perPage, $search, $sortBy, $filters);
-    }
-
-    /**
-     * Create new verse with business logic
-     *
-     * @param  array<string, mixed>  $data
-     */
-    public function create(array $data): Verse
+    public function findForAdmin(int $id): ?Verse
     {
-        // Calculate verse_key if not provided
-        if (! isset($data['verse_key']) || $data['verse_key'] === 0) {
-            $data['verse_key'] = $this->calculateVerseKey($data['surah_id'], $data['verse_number']);
-        }
-
-        /** @var Verse */
-        return $this->repository->create($data);
+        return $this->verses->findForAdmin($id);
     }
 
-    /**
-     * Update existing verse (BaseService signature compatibility)
-     *
-     * @param  array<string, mixed>  $data
-     */
-    public function update(int $id, array $data): bool
+    public function update(int $id, VerseEditData $data): Verse
     {
-        // Recalculate verse_key if surah or verse number changed
-        if (isset($data['surah_id']) || isset($data['verse_number'])) {
-            $verse = $this->repository->findOrFail($id);
-            $surahId = $data['surah_id'] ?? $verse->surah_id;
-            $verseNumber = $data['verse_number'] ?? $verse->verse_number;
+        $verse = $this->verses->update($id, $data);
+        QuranCacheKeys::flushContent();
 
-            $data['verse_key'] = $this->calculateVerseKey($surahId, $verseNumber);
-        }
-
-        return parent::update($id, $data);
+        return $verse;
     }
 
     /**
-     * Update existing verse and return updated model
-     *
-     * @param  array<string, mixed>  $data
+     * @param  array<int, string|null>  $glosses  resource id => text
      */
-    public function updateVerse(int $id, array $data): Verse
+    public function updateWordGlosses(int $wordId, array $glosses): int
     {
-        // Recalculate verse_key if surah or verse number changed
-        if (isset($data['surah_id']) || isset($data['verse_number'])) {
-            $verse = $this->repository->findOrFail($id);
-            $surahId = $data['surah_id'] ?? $verse->surah_id;
-            $verseNumber = $data['verse_number'] ?? $verse->verse_number;
+        $changed = $this->verses->updateWordGlosses($wordId, $glosses);
+        QuranCacheKeys::flushContent();
 
-            $data['verse_key'] = $this->calculateVerseKey($surahId, $verseNumber);
-        }
-
-        $this->repository->update($id, $data);
-
-        /** @var Verse */
-        return $this->repository->findOrFail($id);
+        return $changed;
     }
 
     /**
-     * Get verse with all relations
+     * @param  list<int>  $ids
      */
-    public function getWithRelations(int $id): Verse
+    public function setLocked(array $ids, bool $locked): int
     {
-        /** @var Verse */
-        return $this->repository->findOrFail($id, ['*'], ['surah', 'tafsirs']);
-    }
-
-    /**
-     * Bulk delete verses
-     *
-     * @param  array<int>  $ids
-     * @return int Number of deleted records
-     */
-    public function bulkDelete(array $ids): int
-    {
-        return $this->repository->bulkDelete($ids);
-    }
-
-    /**
-     * Search verses across text and translations
-     */
-    public function search(
-        string $query,
-        int $perPage = 15,
-        ?int $surahId = null,
-        string $language = 'en'
-    ): LengthAwarePaginator {
-        /** @var VerseRepositoryInterface */
-        $repo = $this->repository;
-
-        return $repo->search($query, $perPage, $surahId, $language);
-    }
-
-    /**
-     * Count verses
-     *
-     * @param  array<string, mixed>  $conditions
-     */
-    public function count(array $conditions = []): int
-    {
-        return $this->repository->count($conditions);
-    }
-
-    /**
-     * Count Sajda verses
-     */
-    public function countSajdaVerses(): int
-    {
-        /** @var VerseRepositoryInterface */
-        $repo = $this->repository;
-
-        return $repo->countSajdaVerses();
-    }
-
-    /**
-     * Get verses by surah
-     *
-     * @return Collection
-     */
-    public function getBySurah(int $surahId)
-    {
-        return $this->repository->getBySurah($surahId);
-    }
-
-    /**
-     * Get one surah's verses, paginated for a listing
-     */
-    public function paginateBySurah(int $surahId, int $perPage = 10): LengthAwarePaginator
-    {
-        /** @var VerseRepositoryInterface */
-        $repo = $this->repository;
-
-        return $repo->paginateBySurah($surahId, $perPage);
-    }
-
-    /**
-     * Get verse by surah and verse number
-     */
-    public function getBySurahAndVerse(int $surahNumber, int $verseNumber): ?Verse
-    {
-        return $this->repository->getBySurahAndVerse($surahNumber, $verseNumber);
-    }
-
-    /**
-     * Get verses by Juz
-     */
-    public function getByJuz(int $juz, int $perPage = 50): LengthAwarePaginator
-    {
-        return $this->repository->getByJuz($juz, $perPage);
-    }
-
-    /**
-     * Get verses by page
-     *
-     * @return Collection
-     */
-    public function getByPage(int $page)
-    {
-        return $this->repository->getByPage($page);
-    }
-
-    /**
-     * Build the canonical "surah:verse" key (e.g. "2:255").
-     *
-     * This previously returned a cumulative verse count as an int, so an
-     * admin-created verse got a key like 262 instead of "2:255" — breaking
-     * lookups, adjacent-verse navigation and every tafsir join keyed on it.
-     * quran_surahs.id is the surah number, so no query is needed.
-     */
-    protected function calculateVerseKey(int $surahId, int $verseNumber): string
-    {
-        return $surahId.':'.$verseNumber;
+        return $this->verses->setLocked($ids, $locked);
     }
 }

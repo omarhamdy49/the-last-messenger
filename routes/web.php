@@ -15,7 +15,11 @@ use App\Http\Controllers\Site\MediaController;
 use App\Http\Controllers\Site\PageController;
 use App\Http\Controllers\Site\PasswordResetController;
 use App\Http\Controllers\Site\ProfileController;
-use App\Http\Controllers\Site\QuranController;
+use App\Http\Controllers\Site\Quran\AskController as QuranAskController;
+use App\Http\Controllers\Site\Quran\NavigationController as QuranNavigationController;
+use App\Http\Controllers\Site\Quran\ReaderController as QuranReaderController;
+use App\Http\Controllers\Site\Quran\ReciterController as QuranReciterController;
+use App\Http\Controllers\Site\Quran\SearchController as QuranSearchController;
 use App\Http\Controllers\Site\QuranPlaylistController;
 use App\Http\Controllers\Site\SahabaController;
 use App\Http\Controllers\Site\SearchController;
@@ -32,11 +36,19 @@ Route::get('/home-card-images/{media}', HomeModuleCardImageController::class)
     ->whereNumber('media')
     ->name('public.home-card-image');
 
-// Quran public pages
-Route::get('/quran', [QuranController::class, 'index'])->name('public.quran');
-Route::get('/quran/surahs', [QuranController::class, 'surahsJson'])->name('public.quran.surahs.json');
-Route::get('/quran/reciters', [QuranController::class, 'reciters'])->name('public.quran.reciters');
-Route::get('/quran/reciters/{slug}', [QuranController::class, 'reciter'])->name('public.quran.reciter');
+// Quran public pages (006: served from local Quran Foundation data)
+Route::get('/quran', [QuranReaderController::class, 'index'])->name('public.quran');
+Route::get('/quran/surahs', [QuranReaderController::class, 'surahsJson'])->name('public.quran.surahs.json');
+Route::get('/quran/reciters', [QuranReciterController::class, 'index'])->name('public.quran.reciters');
+Route::get('/quran/reciters/{slug}', [QuranReciterController::class, 'show'])->name('public.quran.reciter');
+Route::get('/quran/search', [QuranSearchController::class, 'page'])->middleware('throttle:search')->name('public.quran.search');
+Route::get('/quran/search/quick', [QuranSearchController::class, 'quick'])->middleware('throttle:search')->name('public.quran.search.quick');
+Route::get('/quran/random', [QuranReaderController::class, 'random'])->name('public.quran.random');
+Route::get('/quran/verse/{key}', [QuranReaderController::class, 'verse'])->where('key', '\d{1,3}:\d{1,3}')->name('public.quran.verse');
+Route::get('/quran/translation/{resource}', [QuranReaderController::class, 'translationResource'])->whereNumber('resource')->name('public.quran.translation');
+Route::get('/quran/tafsir/{resource}', [QuranReaderController::class, 'tafsirResource'])->whereNumber('resource')->name('public.quran.tafsir');
+Route::get('/quran/tafsir/{resource}/chapter/{surahNumber}', [QuranReaderController::class, 'chapterTafsir'])
+    ->whereNumber(['resource', 'surahNumber'])->name('public.quran.tafsir.chapter');
 // Reciter playlists. Static segments (new, preview, audio) are declared before
 // `{slug}`, and the slug is constrained to the 12-char random form.
 Route::get('/quran/playlists', [QuranPlaylistController::class, 'index'])->name('public.quran.playlists.index');
@@ -55,43 +67,46 @@ Route::prefix('/quran/playlists/{slug}')->where(['slug' => '[a-z0-9]{12}'])->con
         Route::patch('/visibility', 'visibility')->name('public.quran.playlists.visibility');
     });
 });
-Route::get('/quran/live', [QuranController::class, 'live'])->name('public.quran.live');
-Route::get('/quran/asbab-al-nuzul', [QuranController::class, 'asbab'])->name('public.quran.asbab');
+// Live channels belong to the Media module now.
+Route::redirect('/quran/live', '/media/live', 301);
 // "Ask the Quran" inquiry search (canonical verse retrieval, no LLM).
-Route::get('/quran/ask', [QuranController::class, 'ask'])->name('public.quran.ask');
-Route::get('/quran/ask/search', [QuranController::class, 'askSearch'])
+Route::get('/quran/ask', [QuranAskController::class, 'ask'])->name('public.quran.ask');
+Route::get('/quran/ask/search', [QuranAskController::class, 'askSearch'])
     ->middleware('throttle:search')->name('public.quran.ask.search');
 // AI answer (DeepSeek + quran.ai MCP): registered users only, monthly-quota
 // limited (enforced in the handler) with a per-minute burst throttle keyed by user.
-Route::post('/quran/ask', [QuranController::class, 'askAi'])
+Route::post('/quran/ask', [QuranAskController::class, 'askAi'])
     ->middleware(['auth', 'throttle:ai_inquiry'])->name('public.quran.ask.submit');
 // Streaming (SSE) variant of the AI answer — same auth + monthly-quota policy.
-Route::post('/quran/ask/stream', [QuranController::class, 'askAiStream'])
+Route::post('/quran/ask/stream', [QuranAskController::class, 'askAiStream'])
     ->middleware(['auth', 'throttle:ai_inquiry'])->name('public.quran.ask.stream');
 // One past inquiry (Q&A) for the history aside — auth + IDOR-safe (scoped to user).
-Route::get('/quran/ask/history/{inquiry}', [QuranController::class, 'askHistory'])
+Route::get('/quran/ask/history/{inquiry}', [QuranAskController::class, 'askHistory'])
     ->whereNumber('inquiry')->middleware('auth')->name('public.quran.ask.history');
-Route::get('/quran/surah/{surahNumber}', [QuranController::class, 'surah'])
+Route::get('/quran/surah/{surahNumber}', [QuranReaderController::class, 'surah'])
     ->whereNumber('surahNumber')->name('public.quran.surah');
-// Lazy editions (keep the surah page light): tafsir is fetched per verse on demand;
-// a non-default translation edition is fetched once per surah when selected.
-Route::get('/quran/verse/{verseId}/tafsir/{resourceId}', [QuranController::class, 'verseTafsir'])
+// Lazy content (keeps the surah page light): tafsir per verse on demand; a
+// non-default translation once per surah when selected.
+Route::get('/quran/verse/{verseId}/tafsir/{resourceId}', [QuranReaderController::class, 'verseTafsir'])
     ->whereNumber('verseId')->whereNumber('resourceId')->name('public.quran.verse.tafsir');
-Route::get('/quran/surah/{surahNumber}/translation/{resourceId}', [QuranController::class, 'surahTranslation'])
+Route::get('/quran/verse/{verseId}/words', [QuranReaderController::class, 'verseWords'])
+    ->whereNumber('verseId')->name('public.quran.verse.words');
+Route::get('/quran/surah/{surahNumber}/info', [QuranReaderController::class, 'surahInfo'])
+    ->whereNumber('surahNumber')->name('public.quran.surah.info');
+Route::get('/quran/surah/{surahNumber}/translation/{resourceId}', [QuranReaderController::class, 'surahTranslation'])
     ->whereNumber('surahNumber')->whereNumber('resourceId')->name('public.quran.surah.translation');
-// Per-ayah timings for the whole-surah recording, so the player can highlight
-// the ayah being recited. Empty for reciters mp3quran publishes no timings for.
-Route::get('/quran/surah/{surahNumber}/timings/{reciterId}', [QuranController::class, 'surahTimings'])
+// Verse timings of a chapter reciter's file, so the player can highlight the ayah being recited.
+Route::get('/quran/surah/{surahNumber}/timings/{reciterId}', [QuranReaderController::class, 'surahTimings'])
     ->whereNumber('surahNumber')->whereNumber('reciterId')->name('public.quran.surah.timings');
-Route::get('/quran/juz/{juz}', [QuranController::class, 'juz'])
-    ->whereNumber('juz')->name('public.quran.juz');
-Route::get('/quran/hizb/{hizb}', [QuranController::class, 'hizb'])
-    ->whereNumber('hizb')->name('public.quran.hizb');
-Route::get('/quran/page/{page}', [QuranController::class, 'page'])
-    ->whereNumber('page')->name('public.quran.page');
+Route::get('/quran/juz/{juz}', [QuranNavigationController::class, 'juz'])->whereNumber('juz')->name('public.quran.juz');
+Route::get('/quran/hizb/{hizb}', [QuranNavigationController::class, 'hizb'])->whereNumber('hizb')->name('public.quran.hizb');
+Route::get('/quran/rub/{rub}', [QuranNavigationController::class, 'rub'])->whereNumber('rub')->name('public.quran.rub');
+Route::get('/quran/manzil/{manzil}', [QuranNavigationController::class, 'manzil'])->whereNumber('manzil')->name('public.quran.manzil');
+Route::get('/quran/ruku/{ruku}', [QuranNavigationController::class, 'ruku'])->whereNumber('ruku')->name('public.quran.ruku');
+Route::get('/quran/page/{page}', [QuranNavigationController::class, 'page'])->whereNumber('page')->name('public.quran.page');
 // Short surah URL (e.g. /quran/2). Numeric-only so it never shadows the named
-// routes above (reciters, live, juz, hizb, page).
-Route::get('/quran/{surahNumber}', [QuranController::class, 'surah'])
+// routes above (reciters, search, juz, hizb, page).
+Route::get('/quran/{surahNumber}', [QuranReaderController::class, 'surah'])
     ->whereNumber('surahNumber')->name('public.quran.surah.short');
 
 // Hadith

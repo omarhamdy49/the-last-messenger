@@ -2,17 +2,20 @@
 
 declare(strict_types=1);
 
+use App\Domain\Quran\Enums\ResourceKind;
+use App\Domain\Quran\Enums\SectionType;
 use App\Http\Controllers\Admin\Quran\AiInquiryController;
+use App\Http\Controllers\Admin\Quran\AudioFileController;
+use App\Http\Controllers\Admin\Quran\ChapterAudioController;
+use App\Http\Controllers\Admin\Quran\ChapterController;
+use App\Http\Controllers\Admin\Quran\LanguageController;
+use App\Http\Controllers\Admin\Quran\MushafController;
 use App\Http\Controllers\Admin\Quran\PlaylistController;
-use App\Http\Controllers\Admin\Quran\RecitationController;
-use App\Http\Controllers\Admin\Quran\ReciterController;
-use App\Http\Controllers\Admin\Quran\ReciterProfileController;
-use App\Http\Controllers\Admin\Quran\RecordingSourceController;
-use App\Http\Controllers\Admin\Quran\RevelationContextController;
-use App\Http\Controllers\Admin\Quran\SurahController;
-use App\Http\Controllers\Admin\Quran\TafseerController;
-use App\Http\Controllers\Admin\Quran\TafsirResourceController;
-use App\Http\Controllers\Admin\Quran\TranslationResourceController;
+use App\Http\Controllers\Admin\Quran\ReciterSourceController;
+use App\Http\Controllers\Admin\Quran\ResourceController;
+use App\Http\Controllers\Admin\Quran\ResourceRowController;
+use App\Http\Controllers\Admin\Quran\SectionController;
+use App\Http\Controllers\Admin\Quran\SyncController;
 use App\Http\Controllers\Admin\Quran\VerseController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,135 +29,6 @@ Route::prefix('ai-inquiries')->name('admin.quran.ai-inquiries.')->group(function
     Route::delete('/{inquiry}', [AiInquiryController::class, 'destroy'])->whereNumber('inquiry')->name('destroy');
 });
 
-// The former `quran` verse-CRUD surface was removed: it was a duplicate of the
-// `verses` routes below (the only ones linked from the sidebar) and it was wired
-// to the Surah repository, so "delete verse" deleted the Surah of that id and
-// cascaded to all of its verses. Use admin.verses.* for verse management.
-
-// Quran Surah Routes (no create/store - 114 surahs are fixed)
-Route::prefix('surahs')->group(function (): void {
-    Route::get('/search', [SurahController::class, 'search'])->name('admin.surahs.search');
-});
-Route::resource('surahs', SurahController::class)->except(['create', 'store', 'destroy'])->names([
-    'index' => 'admin.surahs.index',
-    'show' => 'admin.surahs.show',
-    'edit' => 'admin.surahs.edit',
-    'update' => 'admin.surahs.update',
-]);
-
-// Quran Verse Routes (full CRUD)
-Route::prefix('verses')->group(function (): void {
-    Route::get('/search', [VerseController::class, 'search'])->name('admin.verses.search');
-    Route::get('/by-surah/{surahId}', [VerseController::class, 'bySurah'])->name('admin.verses.by-surah');
-    Route::post('/bulk-delete', [VerseController::class, 'bulkDelete'])->name('admin.verses.bulk-delete');
-});
-Route::resource('verses', VerseController::class)->names([
-    'index' => 'admin.verses.index',
-    'create' => 'admin.verses.create',
-    'store' => 'admin.verses.store',
-    'show' => 'admin.verses.show',
-    'edit' => 'admin.verses.edit',
-    'update' => 'admin.verses.update',
-    'destroy' => 'admin.verses.destroy',
-]);
-
-// Reciter Routes
-Route::prefix('reciter-profiles')->name('admin.reciter-profiles.')->controller(ReciterProfileController::class)->group(function (): void {
-    // Static segments first, then {profile} routes.
-    Route::get('/', 'index')->name('index');
-    Route::get('/create', 'create')->name('create');
-    Route::post('/', 'store')->name('store');
-    Route::get('/{profile}/edit', 'edit')->whereNumber('profile')->name('edit');
-    Route::put('/{profile}', 'update')->whereNumber('profile')->name('update');
-    Route::delete('/{profile}', 'destroy')->whereNumber('profile')->name('destroy');
-    Route::post('/{profile}/toggle/{field}', 'toggle')->whereNumber('profile')->whereIn('field', ['active', 'featured'])->name('toggle');
-    Route::post('/{profile}/merge', 'merge')->whereNumber('profile')->name('merge');
-    Route::post('/{profile}/recordings', 'attach')->whereNumber('profile')->name('recordings.attach');
-    Route::delete('/{profile}/recordings/{recording}', 'detach')->whereNumber(['profile', 'recording'])->name('recordings.detach');
-    Route::post('/{profile}/recordings/{recording}/default', 'setDefault')->whereNumber(['profile', 'recording'])->name('recordings.default');
-});
-
-Route::prefix('reciters')->group(function (): void {
-    Route::get('/{reciter}/sources', [RecordingSourceController::class, 'index'])->whereNumber('reciter')->name('admin.reciters.sources.index');
-    Route::post('/{reciter}/sources', [RecordingSourceController::class, 'store'])->whereNumber('reciter')->name('admin.reciters.sources.store');
-    Route::post('/{reciter}/sources/{source}/fill', [RecordingSourceController::class, 'fill'])->whereNumber(['reciter', 'source'])->name('admin.reciters.sources.fill');
-    Route::put('/{reciter}/sources/{source}', [RecordingSourceController::class, 'update'])->whereNumber(['reciter', 'source'])->name('admin.reciters.sources.update');
-    Route::delete('/{reciter}/sources/{source}', [RecordingSourceController::class, 'destroy'])->whereNumber(['reciter', 'source'])->name('admin.reciters.sources.destroy');
-    Route::get('/search', [ReciterController::class, 'search'])->name('admin.reciters.search');
-    Route::post('/bulk-delete', [ReciterController::class, 'bulkDelete'])->name('admin.reciters.bulk-delete');
-    Route::post('/reorder', [ReciterController::class, 'reorder'])->name('admin.reciters.reorder');
-    Route::post('/{id}/toggle-featured', [ReciterController::class, 'toggleFeatured'])->name('admin.reciters.toggle-featured');
-
-    // Per-surah audio recordings (recitations) nested under a reciter
-    Route::get('/{reciter}/recitations', [ReciterController::class, 'recitations'])
-        ->whereNumber('reciter')
-        ->name('admin.reciters.recitations.index');
-    Route::post('/{reciter}/recitations', [RecitationController::class, 'store'])
-        ->whereNumber('reciter')
-        ->name('admin.reciters.recitations.store');
-    Route::put('/{reciter}/recitations/{recitation}', [RecitationController::class, 'update'])
-        ->whereNumber(['reciter', 'recitation'])
-        ->name('admin.reciters.recitations.update');
-    Route::delete('/{reciter}/recitations/{recitation}', [RecitationController::class, 'destroy'])
-        ->whereNumber(['reciter', 'recitation'])
-        ->name('admin.reciters.recitations.destroy');
-});
-Route::resource('reciters', ReciterController::class)->names([
-    'index' => 'admin.reciters.index',
-    'create' => 'admin.reciters.create',
-    'store' => 'admin.reciters.store',
-    'show' => 'admin.reciters.show',
-    'edit' => 'admin.reciters.edit',
-    'update' => 'admin.reciters.update',
-    'destroy' => 'admin.reciters.destroy',
-]);
-
-// Tafseer Routes
-Route::prefix('tafseer')->group(function (): void {
-    Route::get('/search', [TafseerController::class, 'search'])->name('admin.tafseer.search');
-    Route::post('/bulk-delete', [TafseerController::class, 'bulkDelete'])->name('admin.tafseer.bulk-delete');
-});
-Route::resource('tafseer', TafseerController::class)->names([
-    'index' => 'admin.tafseer.index',
-    'create' => 'admin.tafseer.create',
-    'store' => 'admin.tafseer.store',
-    'show' => 'admin.tafseer.show',
-    'edit' => 'admin.tafseer.edit',
-    'update' => 'admin.tafseer.update',
-    'destroy' => 'admin.tafseer.destroy',
-]);
-
-// Tafsir Resource (source) Routes
-Route::resource('tafsir-resources', TafsirResourceController::class)->except(['show'])->names([
-    'index' => 'admin.tafsir-resources.index',
-    'create' => 'admin.tafsir-resources.create',
-    'store' => 'admin.tafsir-resources.store',
-    'edit' => 'admin.tafsir-resources.edit',
-    'update' => 'admin.tafsir-resources.update',
-    'destroy' => 'admin.tafsir-resources.destroy',
-]);
-
-// Translation Edition (resource) Routes
-Route::resource('translation-resources', TranslationResourceController::class)->except(['show'])->names([
-    'index' => 'admin.translation-resources.index',
-    'create' => 'admin.translation-resources.create',
-    'store' => 'admin.translation-resources.store',
-    'edit' => 'admin.translation-resources.edit',
-    'update' => 'admin.translation-resources.update',
-    'destroy' => 'admin.translation-resources.destroy',
-]);
-
-// Revelation Context (Asbab al-Nuzul) Routes
-Route::resource('revelation-contexts', RevelationContextController::class)->names([
-    'index' => 'admin.revelation-contexts.index',
-    'create' => 'admin.revelation-contexts.create',
-    'store' => 'admin.revelation-contexts.store',
-    'show' => 'admin.revelation-contexts.show',
-    'edit' => 'admin.revelation-contexts.edit',
-    'update' => 'admin.revelation-contexts.update',
-    'destroy' => 'admin.revelation-contexts.destroy',
-]);
-
 // Visitor-built reciter playlists (moderation). `{playlist}` is the numeric id:
 // the model's route key is the public slug, so no implicit binding here.
 Route::prefix('playlists')->name('admin.playlists.')->controller(PlaylistController::class)->group(function (): void {
@@ -165,4 +39,113 @@ Route::prefix('playlists')->name('admin.playlists.')->controller(PlaylistControl
     Route::put('/{playlist}', 'update')->whereNumber('playlist')->name('update');
     Route::delete('/{playlist}', 'destroy')->whereNumber('playlist')->name('destroy');
     Route::post('/{playlist}/toggle/{field}', 'toggle')->whereNumber('playlist')->whereIn('field', ['public', 'featured'])->name('toggle');
+});
+
+/*
+| Quran Foundation content (006). The corpus (chapters, verses, words, sections)
+| has no create/delete routes. Static segments are registered before {id} routes.
+*/
+$kinds = array_map(static fn (ResourceKind $k): string => $k->routeSegment(), ResourceKind::cases());
+$rowKinds = ['translations', 'tafsirs', 'chapter-infos'];
+
+Route::prefix('quran')->name('admin.quran.')->group(function () use ($kinds, $rowKinds): void {
+    // Reads
+    Route::middleware('permission:view quran,admin')->group(function () use ($kinds, $rowKinds): void {
+        Route::get('chapters', [ChapterController::class, 'index'])->name('chapters.index');
+        Route::get('chapters/search', [ChapterController::class, 'search'])->name('chapters.search');
+        Route::get('chapters/{chapter}', [ChapterController::class, 'show'])->whereNumber('chapter')->name('chapters.show');
+
+        Route::get('verses', [VerseController::class, 'index'])->name('verses.index');
+        Route::get('verses/{verse}', [VerseController::class, 'show'])->whereNumber('verse')->name('verses.show');
+        Route::get('verses/{verse}/words', [VerseController::class, 'words'])->whereNumber('verse')->name('verses.words.index');
+
+        Route::get('sections/{type}', [SectionController::class, 'index'])->whereIn('type', SectionType::values())->name('sections.index');
+        Route::get('sections/{type}/{number}', [SectionController::class, 'show'])->whereIn('type', SectionType::values())->whereNumber('number')->name('sections.show');
+
+        Route::get('mushafs', [MushafController::class, 'index'])->name('mushafs.index');
+        Route::get('mushafs/{mushaf}', [MushafController::class, 'show'])->whereNumber('mushaf')->name('mushafs.show');
+
+        Route::get('languages', [LanguageController::class, 'index'])->name('languages.index');
+
+        Route::get('resources/{kind}', [ResourceController::class, 'index'])->whereIn('kind', $kinds)->name('resources.index');
+        Route::get('resources/{resource}', [ResourceController::class, 'show'])->whereNumber('resource')->name('resources.show');
+
+        foreach ($rowKinds as $rows) {
+            Route::get("resources/{resource}/{$rows}", [ResourceRowController::class, 'index'])->whereNumber('resource')->defaults('rows', $rows)->name("resources.{$rows}.index");
+        }
+        Route::get('resources/{resource}/audio-files', [AudioFileController::class, 'index'])->whereNumber('resource')->name('resources.audio-files.index');
+        Route::get('resources/{resource}/chapter-audio', [ChapterAudioController::class, 'index'])->whereNumber('resource')->name('resources.chapter-audio.index');
+
+        Route::get('sync', [SyncController::class, 'index'])->name('sync.index');
+        Route::get('sync/runs/{run}', [SyncController::class, 'run'])->whereNumber('run')->name('sync.runs.show');
+    });
+
+    // Writes
+    Route::middleware('permission:edit quran,admin')->group(function () use ($kinds, $rowKinds): void {
+        Route::get('chapters/{chapter}/edit', [ChapterController::class, 'edit'])->whereNumber('chapter')->name('chapters.edit');
+        Route::put('chapters/{chapter}', [ChapterController::class, 'update'])->whereNumber('chapter')->name('chapters.update');
+
+        Route::post('verses/bulk-lock', [VerseController::class, 'bulkLock'])->name('verses.bulk-lock');
+        Route::get('verses/{verse}/edit', [VerseController::class, 'edit'])->whereNumber('verse')->name('verses.edit');
+        Route::put('verses/{verse}', [VerseController::class, 'update'])->whereNumber('verse')->name('verses.update');
+        Route::patch('verses/{verse}/lock', [VerseController::class, 'lock'])->whereNumber('verse')->name('verses.lock');
+        Route::put('words/{word}', [VerseController::class, 'updateWord'])->whereNumber('word')->name('words.update');
+
+        Route::put('mushafs/{mushaf}', [MushafController::class, 'update'])->whereNumber('mushaf')->name('mushafs.update');
+
+        Route::get('languages/create', [LanguageController::class, 'create'])->name('languages.create');
+        Route::post('languages', [LanguageController::class, 'store'])->name('languages.store');
+        Route::get('languages/{language}/edit', [LanguageController::class, 'edit'])->whereNumber('language')->name('languages.edit');
+        Route::put('languages/{language}', [LanguageController::class, 'update'])->whereNumber('language')->name('languages.update');
+        Route::delete('languages/{language}', [LanguageController::class, 'destroy'])->whereNumber('language')->name('languages.destroy');
+        Route::post('languages/{language}/toggle', [LanguageController::class, 'toggle'])->whereNumber('language')->name('languages.toggle');
+
+        Route::get('resources/{kind}/create', [ResourceController::class, 'create'])->whereIn('kind', $kinds)->name('resources.create');
+        Route::post('resources/{kind}', [ResourceController::class, 'store'])->whereIn('kind', $kinds)->name('resources.store');
+        Route::post('resources/{kind}/reorder', [ResourceController::class, 'reorder'])->whereIn('kind', $kinds)->name('resources.reorder');
+        Route::get('resources/{resource}/edit', [ResourceController::class, 'edit'])->whereNumber('resource')->name('resources.edit');
+        Route::put('resources/{resource}', [ResourceController::class, 'update'])->whereNumber('resource')->name('resources.update');
+        Route::delete('resources/{resource}', [ResourceController::class, 'destroy'])->whereNumber('resource')->name('resources.destroy');
+        Route::post('resources/{resource}/toggle/{field}', [ResourceController::class, 'toggle'])->whereNumber('resource')
+            ->whereIn('field', ['is_active', 'is_default', 'sync_enabled'])->name('resources.toggle');
+
+        foreach ($rowKinds as $rows) {
+            Route::post("resources/{resource}/{$rows}", [ResourceRowController::class, 'store'])->whereNumber('resource')->defaults('rows', $rows)->name("resources.{$rows}.store");
+            Route::post("resources/{resource}/{$rows}/import", [ResourceRowController::class, 'import'])->whereNumber('resource')->defaults('rows', $rows)->name("resources.{$rows}.import");
+            Route::put("resources/{resource}/{$rows}/{row}", [ResourceRowController::class, 'update'])->whereNumber(['resource', 'row'])->defaults('rows', $rows)->name("resources.{$rows}.update");
+            Route::delete("resources/{resource}/{$rows}/{row}", [ResourceRowController::class, 'destroy'])->whereNumber(['resource', 'row'])->defaults('rows', $rows)->name("resources.{$rows}.destroy");
+        }
+
+        Route::post('resources/{resource}/audio-files', [AudioFileController::class, 'store'])->whereNumber('resource')->name('resources.audio-files.store');
+        Route::post('resources/{resource}/audio-files/fill', [AudioFileController::class, 'fill'])->whereNumber('resource')->name('resources.audio-files.fill');
+        Route::put('resources/{resource}/audio-files/{file}', [AudioFileController::class, 'update'])->whereNumber(['resource', 'file'])->name('resources.audio-files.update');
+        Route::delete('resources/{resource}/audio-files/{file}', [AudioFileController::class, 'destroy'])->whereNumber(['resource', 'file'])->name('resources.audio-files.destroy');
+
+        Route::post('resources/{resource}/chapter-audio', [ChapterAudioController::class, 'store'])->whereNumber('resource')->name('resources.chapter-audio.store');
+        Route::post('resources/{resource}/chapter-audio/fill', [ChapterAudioController::class, 'fill'])->whereNumber('resource')->name('resources.chapter-audio.fill');
+        Route::put('resources/{resource}/chapter-audio/{file}', [ChapterAudioController::class, 'update'])->whereNumber(['resource', 'file'])->name('resources.chapter-audio.update');
+        Route::delete('resources/{resource}/chapter-audio/{file}', [ChapterAudioController::class, 'destroy'])->whereNumber(['resource', 'file'])->name('resources.chapter-audio.destroy');
+        Route::get('resources/{resource}/chapter-audio/{file}/timestamps', [ChapterAudioController::class, 'timestamps'])->whereNumber(['resource', 'file'])->name('resources.chapter-audio.timestamps.edit');
+        Route::put('resources/{resource}/chapter-audio/{file}/timestamps', [ChapterAudioController::class, 'updateTimestamps'])->whereNumber(['resource', 'file'])->name('resources.chapter-audio.timestamps.update');
+    });
+
+    // Actions that call Quran Foundation or run long imports
+    Route::middleware('permission:sync quran,admin')->group(function () use ($kinds): void {
+        Route::post('sections/reimport', [SectionController::class, 'reimport'])->name('sections.reimport');
+        Route::post('mushafs/{mushaf}/fonts', [MushafController::class, 'fonts'])->whereNumber('mushaf')->name('mushafs.fonts');
+        Route::post('mushafs/{mushaf}/resync', [MushafController::class, 'resync'])->whereNumber('mushaf')->name('mushafs.resync');
+
+        Route::get('resources/{kind}/catalogue', [ResourceController::class, 'catalogue'])->whereIn('kind', $kinds)->name('resources.catalogue');
+        Route::post('resources/{kind}/import-from-qf', [ResourceController::class, 'importFromQf'])->whereIn('kind', $kinds)->name('resources.import-from-qf');
+        Route::post('resources/{resource}/sync', [ResourceController::class, 'sync'])->whereNumber('resource')->name('resources.sync');
+
+        // Source-backed reciters (US4): preview a QF / mp3quran id, fetch in the background.
+        Route::post('resources/reciter-lookup', [ReciterSourceController::class, 'lookup'])->name('resources.lookup');
+        Route::post('resources/{resource}/fetch', [ReciterSourceController::class, 'fetch'])->whereNumber('resource')->name('resources.fetch');
+        Route::get('resources/{resource}/fetch-status', [ReciterSourceController::class, 'status'])->whereNumber('resource')->name('resources.fetch-status');
+
+        Route::post('sync/bootstrap', [SyncController::class, 'bootstrap'])->name('sync.bootstrap');
+        Route::post('sync/incremental', [SyncController::class, 'incremental'])->name('sync.incremental');
+        Route::post('sync/assets', [SyncController::class, 'assets'])->name('sync.assets');
+    });
 });

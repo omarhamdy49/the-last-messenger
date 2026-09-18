@@ -111,7 +111,8 @@ class FullTextSearchTest extends TestCase
             SearchModule::ARTICLE->value => 1,
             SearchModule::MEDIA->value => 1,
             SearchModule::SEERAH->value => 1,
-            SearchModule::QURAN->value => 1,
+            // Quran has two indexes now: the verse scripts and the translation text.
+            SearchModule::QURAN->value => 2,
             SearchModule::SAHABA->value => 2,
         ];
 

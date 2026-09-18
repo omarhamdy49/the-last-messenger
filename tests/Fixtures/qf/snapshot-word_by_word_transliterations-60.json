@@ -1,0 +1,229 @@
+{
+ "resource_group": "word_by_word_transliterations",
+ "resource_id": 60,
+ "resource_content_id": 60,
+ "schema_version": 1,
+ "sync_sequence": 433775,
+ "records": [
+  {
+   "id": 2,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "l-lahi",
+   "updated_at": "2017-02-20T16:07:47.001Z",
+   "resource_id": 60,
+   "word_id": 2
+  },
+  {
+   "id": 3,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "l-raḥmāni",
+   "updated_at": "2017-02-20T16:07:47.025Z",
+   "resource_id": 60,
+   "word_id": 3
+  },
+  {
+   "id": 4,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "l-raḥīmi",
+   "updated_at": "2017-02-20T16:07:47.050Z",
+   "resource_id": 60,
+   "word_id": 4
+  },
+  {
+   "id": 5,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "qul",
+   "updated_at": "2017-02-20T16:07:47.091Z",
+   "resource_id": 60,
+   "word_id": 6
+  },
+  {
+   "id": 6,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "huwa",
+   "updated_at": "2017-02-20T16:07:47.120Z",
+   "resource_id": 60,
+   "word_id": 7
+  },
+  {
+   "id": 7,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "l-lahu",
+   "updated_at": "2017-02-20T16:07:47.150Z",
+   "resource_id": 60,
+   "word_id": 8
+  },
+  {
+   "id": 8,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "aḥadun",
+   "updated_at": "2017-02-20T16:07:47.175Z",
+   "resource_id": 60,
+   "word_id": 9
+  },
+  {
+   "id": 9,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "alif-lam-meem",
+   "updated_at": "2017-02-20T16:07:47.207Z",
+   "resource_id": 60,
+   "word_id": 11
+  },
+  {
+   "id": 10,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "wal-ʿādiyāti",
+   "updated_at": "2017-02-20T16:07:47.244Z",
+   "resource_id": 60,
+   "word_id": 13
+  },
+  {
+   "id": 11,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "ḍabḥan",
+   "updated_at": "2017-02-20T16:07:47.285Z",
+   "resource_id": 60,
+   "word_id": 14
+  },
+  {
+   "id": 12,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "alif-lam-meem",
+   "updated_at": "2017-02-20T16:07:47.324Z",
+   "resource_id": 60,
+   "word_id": 16
+  },
+  {
+   "id": 13,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "tabbat",
+   "updated_at": "2017-02-20T16:07:47.362Z",
+   "resource_id": 60,
+   "word_id": 18
+  },
+  {
+   "id": 14,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "yadā",
+   "updated_at": "2017-02-20T16:07:47.386Z",
+   "resource_id": 60,
+   "word_id": 19
+  },
+  {
+   "id": 15,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "abī",
+   "updated_at": "2017-02-20T16:07:47.414Z",
+   "resource_id": 60,
+   "word_id": 20
+  },
+  {
+   "id": 16,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "lahabin",
+   "updated_at": "2017-02-20T16:07:47.442Z",
+   "resource_id": 60,
+   "word_id": 21
+  },
+  {
+   "id": 17,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "watabba",
+   "updated_at": "2017-02-20T16:07:47.473Z",
+   "resource_id": 60,
+   "word_id": 22
+  },
+  {
+   "id": 18,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "yāayyuhā",
+   "updated_at": "2017-02-20T16:07:47.518Z",
+   "resource_id": 60,
+   "word_id": 24
+  },
+  {
+   "id": 19,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "l-nāsu",
+   "updated_at": "2017-02-20T16:07:47.546Z",
+   "resource_id": 60,
+   "word_id": 25
+  },
+  {
+   "id": 20,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "ittaqū",
+   "updated_at": "2017-02-20T16:07:47.582Z",
+   "resource_id": 60,
+   "word_id": 26
+  },
+  {
+   "id": 21,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "rabbakumu",
+   "updated_at": "2017-02-20T16:07:47.611Z",
+   "resource_id": 60,
+   "word_id": 27
+  },
+  {
+   "id": 22,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "alladhī",
+   "updated_at": "2017-02-20T16:07:47.642Z",
+   "resource_id": 60,
+   "word_id": 28
+  },
+  {
+   "id": 23,
+   "resource_content_id": 60,
+   "language_id": 38,
+   "language_name": "english",
+   "text": "khalaqakum",
+   "updated_at": "2017-02-20T16:07:47.676Z",
+   "resource_id": 60,
+   "word_id": 29
+  }
+ ]
+}

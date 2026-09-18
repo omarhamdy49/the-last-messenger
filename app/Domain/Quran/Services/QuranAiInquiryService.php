@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Services;
 
-use App\Domain\Quran\Application\DTOs\AiAnswerDTO;
+use App\Domain\Quran\DTOs\AiAnswer;
 use App\Domain\Quran\Infrastructure\Llm\ChatClientInterface;
 use App\Domain\Quran\Infrastructure\Llm\ChatResult;
 use App\Domain\Quran\Infrastructure\Mcp\QuranMcpClientInterface;
@@ -41,7 +41,7 @@ final class QuranAiInquiryService
         $this->provider = $provider ?? (string) config('services.quran_ai.provider', 'deepseek');
     }
 
-    public function answer(string $question, string $locale, bool $detailed = false): AiAnswerDTO
+    public function answer(string $question, string $locale, bool $detailed = false): AiAnswer
     {
         $grounding = $this->mcp->grounding();
         $tools = $this->mcp->toolDefinitions();
@@ -105,7 +105,7 @@ final class QuranAiInquiryService
      *
      * @param  callable(array<string, mixed>): void  $emit
      */
-    public function streamAnswer(string $question, string $locale, callable $emit, bool $detailed = false): AiAnswerDTO
+    public function streamAnswer(string $question, string $locale, callable $emit, bool $detailed = false): AiAnswer
     {
         $grounding = $this->mcp->grounding();
         $tools = $this->mcp->toolDefinitions();
@@ -187,11 +187,11 @@ final class QuranAiInquiryService
      * @param  array{prompt:int, completion:int, cached:int, miss:int}  $usage
      * @param  list<array{tool: string, args: array<string, mixed>}>  $citations
      */
-    private function finalize(string $answer, array $usage, array $citations, int $toolCalls): AiAnswerDTO
+    private function finalize(string $answer, array $usage, array $citations, int $toolCalls): AiAnswer
     {
         $provider = $usage['provider'] ?: $this->provider;
 
-        return new AiAnswerDTO(
+        return new AiAnswer(
             answer: $this->stripGroundingFooter($answer),
             citations: $citations,
             inputTokens: $usage['prompt'],
@@ -211,7 +211,7 @@ final class QuranAiInquiryService
      * footer verbatim, which contradicts our own "no source footers" rule. The models
      * follow the MCP rules, so no prompt wording reliably wins — strip it here instead.
      * Nothing is lost: the same tool calls are already captured structurally in
-     * AiAnswerDTO::$citations and surfaced by the UI.
+     * AiAnswer::$citations and surfaced by the UI.
      *
      * The "Partially grounded"/"not grounded" variants are deliberately NOT stripped —
      * those warn the reader that content is unverified, which must reach the user.

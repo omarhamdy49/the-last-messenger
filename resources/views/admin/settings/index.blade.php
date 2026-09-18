@@ -52,6 +52,15 @@
             <i data-lucide="image" class="w-4 h-4"></i>
             {{ __('admin.media_settings') }}
         </a>
+
+        @can('manage api clients')
+        <a href="{{ route('admin.settings.api-clients.index') }}"
+           class="px-4 py-3 text-sm font-semibold border-b-2 border-transparent transition-colors flex items-center gap-2"
+           :class="darkMode ? 'text-gray-400 hover:text-white hover:border-gray-700' : 'text-gray-600 hover:text-gray-900 hover:border-gray-300'">
+            <i data-lucide="key-round" class="w-4 h-4"></i>
+            {{ __('admin.api_clients.tab') }}
+        </a>
+        @endcan
     </nav>
 </div>
 

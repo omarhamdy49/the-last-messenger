@@ -98,7 +98,7 @@ class LocationSchemaTest extends TestCase
         foreach ([
             'seerah_events' => 'location_id',
             'muslims' => 'birth_place_id',
-            'quran_surahs' => 'revelation_location_id',
+            'quran_chapters' => 'revelation_location_id',
         ] as $table => $column) {
             $this->assertTrue(
                 DB::getSchemaBuilder()->hasColumn($table, $column),
@@ -113,6 +113,6 @@ class LocationSchemaTest extends TestCase
         // by 005-seerah-schema-refactor: `location_id` is its only place field.
         $this->assertFalse(DB::getSchemaBuilder()->hasColumn('seerah_events', 'location'));
         $this->assertTrue(DB::getSchemaBuilder()->hasColumn('muslims', 'birth_place'));
-        $this->assertTrue(DB::getSchemaBuilder()->hasColumn('quran_surahs', 'revelation_place'));
+        $this->assertTrue(DB::getSchemaBuilder()->hasColumn('quran_chapters', 'revelation_place'));
     }
 }

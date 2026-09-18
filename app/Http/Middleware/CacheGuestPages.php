@@ -95,7 +95,9 @@ final class CacheGuestPages
         'public.quran.juz',
         'public.quran.page',
         'public.quran.hizb',
-        'public.quran.asbab',
+        'public.quran.rub',
+        'public.quran.manzil',
+        'public.quran.ruku',
         'public.quran.reciters',
         'public.quran.reciter',
         'public.quran.surahs.json',
@@ -133,7 +135,13 @@ final class CacheGuestPages
             // cache rule is "respect origin", so this value drives the edge TTL.
             // Strip ALL Set-Cookie so the edge never stores a session/CSRF token
             // tied to one visitor.
-            $response->headers->set('Cache-Control', 'public, s-maxage=1800, stale-while-revalidate=600');
+            //
+            // `max-age=0` is deliberate and applies to the VISITOR's browser only: with
+            // no max-age a browser may cache heuristically, so a reader kept seeing the
+            // old page after an editor enabled new translations or tafsirs — a reload
+            // did not help and the content looked missing. The edge still caches for the
+            // full 30 minutes, which is where the load saving actually comes from.
+            $response->headers->set('Cache-Control', 'public, max-age=0, s-maxage=1800, stale-while-revalidate=600');
             $response->headers->remove('Set-Cookie');
         } elseif (auth()->check()) {
             // Authenticated (incl. admin): never shared-cache. Belt-and-suspenders

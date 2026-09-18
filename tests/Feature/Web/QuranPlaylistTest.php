@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace Tests\Feature\Web;
 
 use App\Domain\Quran\DTOs\PlaylistData;
+use App\Domain\Quran\Models\Chapter;
+use App\Domain\Quran\Models\ChapterAudioFile;
 use App\Domain\Quran\Models\Playlist;
-use App\Domain\Quran\Models\Recitation;
-use App\Domain\Quran\Models\Reciter;
-use App\Domain\Quran\Models\ReciterProfile;
-use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Models\QuranResource;
 use App\Domain\Quran\Services\PlaylistService;
 use App\Jobs\RecordPlaylistPlayJob;
 use App\Models\User;
@@ -31,41 +30,38 @@ final class QuranPlaylistTest extends TestCase
     public function test_playlist_tables_exist(): void
     {
         $this->assertTrue(Schema::hasColumns('quran_playlists', ['user_id', 'name', 'slug', 'scope', 'is_public', 'is_featured', 'plays_count', 'items_count']));
-        $this->assertTrue(Schema::hasColumns('quran_playlist_items', ['playlist_id', 'surah_id', 'reciter_id']));
+        $this->assertTrue(Schema::hasColumns('quran_playlist_items', ['playlist_id', 'chapter_id', 'resource_id']));
     }
 
     // ------------------------------------------------------------ fixtures
 
-    /** @return list<int> surah ids 1..n */
+    /** @return list<int> chapter numbers 1..n */
     private function surahs(int $n): array
     {
         $ids = [];
         for ($i = 1; $i <= $n; $i++) {
-            $ids[] = Surah::query()->forceCreate([
-                'id' => $i, 'revelation_place' => 'makkah', 'revelation_order' => $i, 'bismillah_pre' => true,
-                'name_ar' => 'س'.$i, 'name_en' => 'S'.$i, 'transliteration' => 'S'.$i, 'verses_count' => 3,
-            ])->id;
+            $ids[] = Chapter::factory()->number($i)->create(['name_arabic' => 'س'.$i, 'name_simple' => 'S'.$i, 'verses_count' => 3])->id;
         }
 
         return $ids;
     }
 
     /**
+     * One chapter reciter with a file for each covered chapter. In 006 the "person" and
+     * the "recording" are the same resource.
+     *
      * @param  list<int>  $covers
-     * @return array{0: int, 1: int} [profile id, recording id]
+     * @return array{0: int, 1: int} [reciter id, reciter id]
      */
     private function person(string $slug, array $covers): array
     {
-        $profile = ReciterProfile::query()->create(['identity_key' => 'test:'.$slug, 'slug' => $slug, 'is_active' => true]);
-        $profile->translations()->create(['locale' => 'ar', 'name' => 'قارئ '.$slug]);
-        $recording = Reciter::query()->create(['slug' => $slug.'-rec', 'profile_id' => $profile->id, 'kind' => 'recitation', 'is_active' => true, 'display_order' => 1]);
-        $recording->translations()->create(['locale' => 'ar', 'name' => $slug, 'is_ready' => true]);
-        foreach ($covers as $surah) {
-            Recitation::query()->create(['reciter_id' => $recording->id, 'surah_id' => $surah, 'audio_url' => "https://cdn.test/{$slug}/{$surah}.mp3", 'format' => 'mp3', 'duration_seconds' => 90]);
+        $reciter = QuranResource::factory()->chapterReciter()->create(['slug' => $slug, 'name' => $slug, 'is_active' => true, 'display_order' => 1]);
+        $reciter->syncTranslations(['name' => ['ar' => 'قارئ '.$slug]]);
+        foreach ($covers as $chapter) {
+            ChapterAudioFile::factory()->create(['resource_id' => $reciter->id, 'chapter_id' => $chapter, 'url' => "https://cdn.test/{$slug}/{$chapter}.mp3", 'duration_ms' => 90000]);
         }
-        $profile->update(['default_recording_id' => $recording->id]);
 
-        return [$profile->id, $recording->id];
+        return [$reciter->id, $reciter->id];
     }
 
     private function makePlaylist(User $owner, array $items, bool $public, string $name = 'ختمتي'): Playlist
@@ -294,7 +290,7 @@ final class QuranPlaylistTest extends TestCase
             ->assertCreated();
 
         $playlist = Playlist::query()->firstOrFail();
-        $this->assertSame([1, 2, 3, 4, 5], $playlist->items->pluck('surah_id')->all());
+        $this->assertSame([1, 2, 3, 4, 5], $playlist->items->pluck('chapter_id')->all());
         $this->assertSame([1, 2, 3, 4, 5], array_column(app(PlaylistService::class)->tracks($playlist, 'ar'), 'surah'));
         $html = $this->get($res->json('redirect'))->assertOk()->getContent();
         $this->assertLessThan(strpos($html, 'س2'), strpos($html, 'س1'));

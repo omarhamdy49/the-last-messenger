@@ -1,0 +1,18 @@
+{
+ "audio_files": [
+  {
+   "id": 911,
+   "chapter_id": 1,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/1.mp3"
+  },
+  {
+   "id": 913,
+   "chapter_id": 2,
+   "file_size": 120888301,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/2.mp3"
+  }
+ ]
+}

@@ -10,7 +10,7 @@ interface ExportableModuleInterface
 {
     /**
      * The module key identifying this exporter — must match an ExportModule enum value.
-     * Examples: 'hadith', 'quran_surahs', 'seerah_events', 'sahaba'
+     * Examples: 'hadith', 'quran_chapters', 'seerah_events', 'sahaba'
      */
     public function getModuleKey(): string;
 

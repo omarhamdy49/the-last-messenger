@@ -1,0 +1,89 @@
+006-quran-qf-refactor — baseline before any change
+Captured 2026-09-17 from commit 550bccf (committed 005 head), exported with `git archive`
+and run against its own test database (tlm_test_006_base).
+
+== Test suite ==
+Command: DB_DATABASE=tlm_test_006_base vendor/bin/phpunit (full suite)
+Tests: 1334, Assertions: 5984, Failures: 3, Skipped: 1, Incomplete: 1
+
+Pre-existing failures (not caused by 006):
+1) Tests\Feature\Admin\ArticleSeriesIntegrationTest::test_full_article_lifecycle_with_all_relations
+2) Tests\Feature\Quran\QuranAskTest::test_inquiry_returns_mapped_verses          (Quran — replaced by 006)
+3) Tests\Feature\Web\RevelationContextPublicTest::test_surah_filter_limits_results (Asbab — removed by 006)
+
+== Quran route names (128) ==
+admin.playlists.bulk-unpublish admin.playlists.coverage admin.playlists.destroy admin.playlists.edit
+admin.playlists.index admin.playlists.toggle admin.playlists.update
+admin.quran.ai-inquiries.answer admin.quran.ai-inquiries.categories admin.quran.ai-inquiries.destroy
+admin.quran.ai-inquiries.index admin.quran.ai-inquiries.publish admin.quran.ai-inquiries.show
+admin.reciter-profiles.create admin.reciter-profiles.destroy admin.reciter-profiles.edit
+admin.reciter-profiles.index admin.reciter-profiles.merge admin.reciter-profiles.recordings.attach
+admin.reciter-profiles.recordings.default admin.reciter-profiles.recordings.detach
+admin.reciter-profiles.store admin.reciter-profiles.toggle admin.reciter-profiles.update
+admin.reciters.bulk-delete admin.reciters.create admin.reciters.destroy admin.reciters.edit
+admin.reciters.index admin.reciters.recitations.destroy admin.reciters.recitations.index
+admin.reciters.recitations.store admin.reciters.recitations.update admin.reciters.reorder
+admin.reciters.search admin.reciters.show admin.reciters.sources.destroy admin.reciters.sources.fill
+admin.reciters.sources.index admin.reciters.sources.store admin.reciters.sources.update
+admin.reciters.store admin.reciters.toggle-featured admin.reciters.update
+admin.revelation-contexts.create admin.revelation-contexts.destroy admin.revelation-contexts.edit
+admin.revelation-contexts.index admin.revelation-contexts.show admin.revelation-contexts.store
+admin.revelation-contexts.update
+admin.surahs.edit admin.surahs.index admin.surahs.search admin.surahs.show admin.surahs.update
+admin.tafseer.bulk-delete admin.tafseer.create admin.tafseer.destroy admin.tafseer.edit
+admin.tafseer.index admin.tafseer.search admin.tafseer.show admin.tafseer.store admin.tafseer.update
+admin.tafsir-resources.create admin.tafsir-resources.destroy admin.tafsir-resources.edit
+admin.tafsir-resources.index admin.tafsir-resources.store admin.tafsir-resources.update
+admin.translation-resources.create admin.translation-resources.destroy admin.translation-resources.edit
+admin.translation-resources.index admin.translation-resources.store admin.translation-resources.update
+admin.verses.bulk-delete admin.verses.by-surah admin.verses.create admin.verses.destroy admin.verses.edit
+admin.verses.index admin.verses.search admin.verses.show admin.verses.store admin.verses.update
+public.quran public.quran.asbab public.quran.ask public.quran.ask.history public.quran.ask.search
+public.quran.ask.stream public.quran.ask.submit public.quran.hizb public.quran.juz public.quran.live
+public.quran.page public.quran.playlists.audio public.quran.playlists.create
+public.quran.playlists.destroy public.quran.playlists.edit public.quran.playlists.index
+public.quran.playlists.plays public.quran.playlists.preview public.quran.playlists.show
+public.quran.playlists.store public.quran.playlists.update public.quran.playlists.visibility
+public.quran.reciter public.quran.reciters public.quran.surah public.quran.surah.short
+public.quran.surah.timings public.quran.surah.translation public.quran.surahs.json
+public.quran.verse.tafsir
+v1.quran.by-revelation v1.quran.juz v1.quran.page v1.quran.random v1.quran.sajda v1.quran.search
+v1.quran.search.suggest v1.quran.surah v1.quran.surahs v1.quran.verse v1.quran.verses
+
+== Quran tables at 550bccf (from migrations) ==
+quran_surahs quran_surah_info quran_verses quran_verse_translations quran_verse_tafsirs
+quran_translation_resources quran_tafsir_resources quran_reciters reciter_translations
+quran_recitations quran_recording_sources quran_reciter_profiles quran_reciter_profile_translations
+quran_reciter_aliases quran_revelation_contexts quran_revelation_context_translations quran_words
+quran_playlists quran_playlist_items ai_inquiries ai_inquiry_usages
+
+== Quran test files at 550bccf ==
+tests/Feature/Quran: AdminAiInquiryTest AdminReciterProfilesTest AdminReciterShowTest AiInquiryQuotaTest
+  AnswerHtmlRendererTest AskQuranEndpointTest AskQuranHandlerTest FallbackChatClientTest
+  GroundingFooterStripTest ImportMushafLayoutTest MixedProviderCostLedgerTest OpenAiCompatChatClientTest
+  PruneAiInquiriesTest QuranAskTest QuranResourceAdminTest ReciterImageInputTest
+  RecordingSourcesAndProfilesTest SurahAyahTimingsTest SurahRevelationLocationTest SyncMp3QuranTest
+tests/Feature/Admin/Quran: SurahShowTest VerseCrudTest
+tests/Feature/Api: QuranApiTest QuranTest
+tests/Feature/Web/QuranPlaylistTest tests/Feature/Web/RevelationContextPublicTest
+tests/Feature/Repositories/VerseRepositoryTest
+tests/Unit/Domain/Quran/Services/VerseAudioUrlResolverTest tests/Unit/Domain/Quran/VerseDtoTranslationEditionTest
+tests/Unit/Quran/AnswerVerseLinkerTest tests/Unit/Quran/PlaylistAssignmentTest tests/Unit/Quran/UnsupportedGenericImportTest
+
+== Cross-module references to old Quran tables found while implementing (outside the plan's count) ==
+app/Http/Controllers/Admin/ImportController.php, app/Jobs/ProcessImport.php (generic import: quran_surahs importer)
+app/Domain/Shared/Enums/ExportModule.php (QURAN_SURAHS)
+app/Console/Commands/Portal/{ExportPortalDataCommand,VerifyPortalDataCommand}.php (prod resync tooling)
+app/Console/Commands/BackfillLocationsCommand.php (quran_surahs.revelation_location_id)
+resources/lang/*/admin.php key `quran_surahs`
+tests/Feature/Locations/{LocationSchemaTest,LocationUsageRegistryTest}.php, tests/Feature/Console/BackfillLocationsCommandTest.php,
+tests/Feature/Admin/LocationDeleteGuardTest.php, tests/Feature/NoNPlusOneQueriesTest.php (quran_surahs)
+These are folded into T127.
+
+--- 2026-09-17, after the dev rollout ---
+QF capabilities on the production credentials: token OK, content OK, hadith not_found,
+reflect insufficient_scope. US5b (hadith references, Quran Reflect posts, QF articles) is
+therefore not implemented — no tables, no importers, no panels.
+Pre-existing suite failure carried through this feature:
+Tests\Feature\Admin\ArticleSeriesIntegrationTest::test_full_article_lifecycle_with_all_relations
+(article locales come back 3 instead of 5; unrelated to the Quran module).

@@ -80,19 +80,8 @@ return new class extends Migration
             }
         }
 
-        // Quran Verses - Add search indexes
-        if (Schema::hasTable('quran_verses')) {
-            try {
-                DB::statement('CREATE INDEX idx_quran_verses_surah ON quran_verses(surah_id)');
-            } catch (Exception $e) {
-                // Index might already exist, skip
-            }
-            try {
-                DB::statement('CREATE INDEX idx_quran_verses_juz ON quran_verses(juz_number)');
-            } catch (Exception $e) {
-                // Index might already exist, skip
-            }
-        }
+        // Quran verse indexes were removed by 006-quran-qf-refactor: the rebuilt
+        // quran_verses table (2026_09_18_000003) declares its own indexes.
     }
 
     /**
@@ -158,17 +147,5 @@ return new class extends Migration
             }
         }
 
-        if (Schema::hasTable('quran_verses')) {
-            try {
-                DB::statement('DROP INDEX idx_quran_verses_surah ON quran_verses');
-            } catch (Exception $e) {
-                // Index might not exist, skip
-            }
-            try {
-                DB::statement('DROP INDEX idx_quran_verses_juz ON quran_verses');
-            } catch (Exception $e) {
-                // Index might not exist, skip
-            }
-        }
     }
 };

@@ -9,9 +9,10 @@ use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithCollection;
 use App\Domain\People\Models\IslamicRole;
 use App\Domain\People\Models\Muslim;
-use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Models\Chapter;
+use App\Domain\Quran\Models\QuranResource;
+use App\Domain\Quran\Models\Translation;
 use App\Domain\Quran\Models\Verse;
-use App\Domain\Quran\Models\VerseTranslation;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -23,46 +24,31 @@ final class ArticleModuleLookupTest extends TestCase
     {
         $this->actingAs($this->createAdminUser());
 
-        $surah = Surah::query()->create([
-            'revelation_place' => 'makkah',
-            'revelation_order' => 5,
-            'name_ar' => 'الفاتحة',
-            'name_en' => 'Al-Fatihah',
-            'verses_count' => 1,
-        ]);
-        $verse = Verse::query()->create([
-            'surah_id' => $surah->id,
-            'verse_number' => 1,
-            'verse_key' => '1:1',
-            'juz_number' => 1,
-            'hizb_number' => 1,
-            'rub_el_hizb_number' => 1,
-            'ruku_number' => 1,
-            'page_number' => 1,
-        ]);
-        VerseTranslation::query()->create([
+        $chapter = Chapter::factory()->number(1)->withVerses(1)->create(['name_arabic' => 'الفاتحة', 'name_simple' => 'Al-Fatihah', 'revelation_order' => 5]);
+        $verse = Verse::query()->where('verse_key', '1:1')->firstOrFail();
+        Translation::factory()->create([
+            'resource_id' => QuranResource::factory()->translation('ar')->create()->id,
             'verse_id' => $verse->id,
-            'lang' => 'ar',
             'text' => 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ',
         ]);
-        VerseTranslation::query()->create([
+        Translation::factory()->create([
+            'resource_id' => QuranResource::factory()->translation('en')->create()->id,
             'verse_id' => $verse->id,
-            'lang' => 'en',
             'text' => 'In the name of Allah, the Most Compassionate, the Most Merciful.',
         ]);
 
         $this->getJson(route('admin.articles.modules.surahs'))
             ->assertOk()
-            ->assertJsonPath('data.0.id', $surah->id)
+            ->assertJsonPath('data.0.id', $chapter->id)
             ->assertJsonPath('data.0.name_ar', 'الفاتحة');
 
-        $this->getJson(route('admin.articles.modules.verses', ['surah' => $surah, 'locale' => 'ar']))
+        $this->getJson(route('admin.articles.modules.verses', ['surah' => $chapter->id, 'locale' => 'ar']))
             ->assertOk()
             ->assertJsonPath('data.0.verse_key', '1:1')
             ->assertJsonPath('data.0.text', 'بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ')
             ->assertJsonPath('data.0.text_locale', 'ar');
 
-        $this->getJson(route('admin.articles.modules.verses', ['surah' => $surah, 'locale' => 'en']))
+        $this->getJson(route('admin.articles.modules.verses', ['surah' => $chapter->id, 'locale' => 'en']))
             ->assertOk()
             ->assertJsonPath('data.0.text', 'In the name of Allah, the Most Compassionate, the Most Merciful.')
             ->assertJsonPath('data.0.text_locale', 'en');

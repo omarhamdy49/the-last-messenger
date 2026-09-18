@@ -4,352 +4,106 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Admin\Quran;
 
-use App\Domain\Quran\Models\Verse;
-use App\Domain\Quran\Services\QuranCacheKeys;
-use App\Domain\Quran\Services\SurahService;
+use App\Domain\Quran\DTOs\VerseEditData;
+use App\Domain\Quran\Enums\ResourceKind;
+use App\Domain\Quran\Services\ResourceService;
 use App\Domain\Quran\Services\VerseService;
-use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\StoreVerseRequest;
-use App\Http\Requests\Admin\UpdateVerseRequest;
-use Illuminate\Database\Eloquent\Collection;
+use App\Http\Requests\Admin\Quran\BulkLockVersesRequest;
+use App\Http\Requests\Admin\Quran\UpdateVerseRequest;
+use App\Http\Requests\Admin\Quran\UpdateWordGlossesRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 /**
- * Admin Verse Controller
- * Handles Quran verse (ayah) management with full CRUD operations
+ * Verses and their words. The corpus is imported, so there is no create or delete;
+ * editing any text locks the verse so a re-import does not overwrite the correction.
  */
-class VerseController extends Controller
+final class VerseController extends Controller
 {
-    /**
-     * Constructor with dependency injection
-     */
     public function __construct(
-        protected VerseService $verseService,
-        protected SurahService $surahService,
-        protected AdminLoggerService $logger
+        private readonly VerseService $verses,
+        private readonly ResourceService $resources,
     ) {}
 
-    /**
-     * Display paginated list of verses
-     *
-     * GET /su/portal/v1/admin/verses
-     */
-    public function index(Request $request): View|JsonResponse
+    public function index(Request $request): View
     {
-        // Get pagination and search parameters
-        $perPage = $request->integer('per_page', 15);
-        $search = $request->string('search')->trim()->toString();
-        $sortBy = $request->string('sort_by', 'verse_key')->toString();
-
-        // Get filters from request
-        $filters = $request->only(['surah_id', 'juz_number', 'page_number', 'is_sajda']);
-
-        // Fetch paginated data with filters applied
-        $verses = $this->verseService->paginateWithFilters(
-            perPage: $perPage,
-            search: $search,
-            sortBy: $sortBy,
-            filters: $filters
-        );
-
-        // Get statistics for stats cards
-        $stats = [
-            'total' => $this->verseService->count(),
-            'total_surahs' => 114,
-            'sajda_verses' => $this->verseService->countSajdaVerses(),
-            'total_juz' => 30,
+        $filters = [
+            'chapter' => $request->filled('chapter') ? $request->integer('chapter') : null,
+            'juz' => $request->filled('juz') ? $request->integer('juz') : null,
+            'page' => $request->filled('mushaf_page') ? $request->integer('mushaf_page') : null,
+            'sajdah' => $request->boolean('sajdah') ?: null,
+            'locked' => $request->filled('locked') ? $request->boolean('locked') : null,
+            'q' => $request->string('q')->toString() ?: null,
         ];
 
-        // Return JSON for AJAX requests, HTML for page loads
-        if ($request->wantsJson() || $request->header('X-Requested-With') === 'XMLHttpRequest') {
-            return response()->json([
-                'success' => true,
-                'data' => $verses->items(),
-                'stats' => $stats,
-                'meta' => [
-                    'current_page' => $verses->currentPage(),
-                    'per_page' => $verses->perPage(),
-                    'total' => $verses->total(),
-                    'last_page' => $verses->lastPage(),
-                ],
-            ]);
-        }
-
-        // Get surahs for filter dropdown
-        $surahs = $this->surahService->getForSelector();
-
-        return view('admin.verses.index', compact('verses', 'stats', 'surahs'));
+        return view('admin.quran.verses.index', $this->verses->adminIndex($filters, $request->integer('per_page', 50)));
     }
 
-    /**
-     * Show create verse form
-     *
-     * GET /su/portal/v1/admin/verses/create
-     */
-    public function create(): View
+    public function show(int $verse): View
     {
-        $surahs = $this->surahService->getForSelector();
-
-        return view('admin.verses.create', compact('surahs'));
+        return view('admin.quran.verses.show', ['verse' => $this->verses->findForAdmin($verse) ?? abort(404)]);
     }
 
-    /**
-     * Store new verse
-     *
-     * POST /su/portal/v1/admin/verses
-     */
-    public function store(StoreVerseRequest $request): RedirectResponse
+    public function words(int $verse): View
     {
-        try {
-            $verse = $this->verseService->create($request->validated());
-
-            // Invalidate verse caches affected by the new verse
-            Cache::forget(QuranCacheKeys::versesBySurah($verse->surah_id));
-            Cache::forget(QuranCacheKeys::surahTotalVerses());
-            Cache::forget(QuranCacheKeys::sajdaVersesCount());
-            // `is_sajda` is not a column and has no accessor — reading it returned null,
-            // so this cache was never actually cleared. hasSajdah() derives from sajdah_number.
-            if ($verse->hasSajdah()) {
-                Cache::forget(QuranCacheKeys::sajdaVerses());
-            }
-
-            // Log the creation
-            $this->logger->logCreate($verse, $request->user());
-
-            return redirect()
-                ->route('admin.verses.show', $verse->id)
-                ->with('success', 'Verse created successfully');
-        } catch (\Throwable $e) {
-            report($e);
-
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', 'Failed to create verse: '.$e->getMessage());
-        }
-    }
-
-    /**
-     * Show verse details
-     *
-     * GET /su/portal/v1/admin/verses/{id}
-     */
-    public function show(int $id): View
-    {
-        $verse = $this->verseService->getWithRelations($id);
-
-        // No $stats here: show.blade.php never read it. words_count/letters_count are
-        // not columns on quran_verses and Verse declares no accessor, so both always
-        // resolved to null and `?? 0` hid it; tafseer_count was a COUNT query per page
-        // view for a value nothing rendered. The view lists $verse->tafsirs directly.
-        return view('admin.verses.show', compact('verse'));
-    }
-
-    /**
-     * Show edit form
-     *
-     * GET /su/portal/v1/admin/verses/{id}/edit
-     */
-    public function edit(int $id): View
-    {
-        $verse = $this->verseService->findOrFail($id);
-        $surahs = $this->surahService->getForSelector();
-
-        return view('admin.verses.edit', compact('verse', 'surahs'));
-    }
-
-    /**
-     * Update verse
-     *
-     * PUT/PATCH /su/portal/v1/admin/verses/{id}
-     */
-    public function update(UpdateVerseRequest $request, int $id): RedirectResponse
-    {
-        try {
-            // Get old values before update
-            $oldVerse = $this->verseService->findOrFail($id);
-            $oldValues = $oldVerse->toArray();
-
-            // Perform update
-            $verse = $this->verseService->update($id, $request->validated());
-
-            // Invalidate verse caches affected by the update
-            Cache::forget(QuranCacheKeys::versesBySurah($verse->surah_id));
-            if ($verse->surah_id !== ($oldValues['surah_id'] ?? $verse->surah_id)) {
-                Cache::forget(QuranCacheKeys::versesBySurah($oldValues['surah_id']));
-            }
-            Cache::forget(QuranCacheKeys::sajdaVerses());
-            Cache::forget(QuranCacheKeys::sajdaVersesCount());
-
-            // Log the update with diff
-            $this->logger->logUpdate($verse, $oldValues, $verse->toArray(), $request->user());
-
-            return redirect()
-                ->route('admin.verses.show', $id)
-                ->with('success', 'Verse updated successfully');
-        } catch (\Throwable $e) {
-            report($e);
-
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', 'Failed to update verse: '.$e->getMessage());
-        }
-    }
-
-    /**
-     * Delete verse
-     *
-     * DELETE /su/portal/v1/admin/verses/{id}
-     */
-    public function destroy(int $id): RedirectResponse
-    {
-        try {
-            // Get model before deletion
-            $verse = $this->verseService->findOrFail($id);
-
-            // Perform deletion
-            $this->verseService->delete($id);
-
-            // Invalidate verse caches affected by the deletion
-            Cache::forget(QuranCacheKeys::versesBySurah($verse->surah_id));
-            Cache::forget(QuranCacheKeys::surahTotalVerses());
-            Cache::forget(QuranCacheKeys::sajdaVerses());
-            Cache::forget(QuranCacheKeys::sajdaVersesCount());
-
-            // Log the deletion
-            $this->logger->logDelete($verse, request()->user());
-
-            return redirect()
-                ->route('admin.verses.index')
-                ->with('success', 'Verse deleted successfully');
-        } catch (\Throwable $e) {
-            report($e);
-
-            return redirect()
-                ->back()
-                ->with('error', 'Failed to delete verse: '.$e->getMessage());
-        }
-    }
-
-    /**
-     * Bulk delete multiple verses
-     *
-     * POST /su/portal/v1/admin/verses/bulk-delete
-     */
-    public function bulkDelete(Request $request): RedirectResponse|JsonResponse
-    {
-        $request->validate([
-            'ids' => ['required', 'array', 'min:1'],
-            'ids.*' => ['integer', 'exists:quran_verses,id'],
-        ]);
-
-        $ids = $request->input('ids');
-
-        try {
-            $deleted = $this->verseService->bulkDelete($ids);
-
-            // Log bulk action
-            $this->logger->logBulkAction(
-                'bulk_delete',
-                Verse::class,
-                $ids,
-                $request->user()
-            );
-
-            $message = "Deleted {$deleted} verses successfully";
-
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'success' => true,
-                    'message' => $message,
-                    'deleted' => $deleted,
-                ]);
-            }
-
-            return redirect()
-                ->route('admin.verses.index')
-                ->with('success', $message);
-        } catch (\Throwable $e) {
-            report($e);
-            if ($request->wantsJson()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Failed to delete verses: '.$e->getMessage(),
-                ], 422);
-            }
-
-            return redirect()
-                ->back()
-                ->with('error', 'Failed to delete verses: '.$e->getMessage());
-        }
-    }
-
-    /**
-     * Search verses (AJAX endpoint)
-     *
-     * GET /su/portal/v1/admin/verses/search
-     */
-    public function search(Request $request): JsonResponse
-    {
-        $request->validate([
-            'q' => ['required', 'string', 'min:1'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
-            'surah_id' => ['nullable', 'integer', 'exists:quran_surahs,id'],
-            'language' => ['nullable', 'string', Rule::in(enabled_content_locales())],
-        ]);
-
-        $query = $request->input('q');
-        $perPage = $request->integer('per_page', 15);
-        $surahId = $request->input('surah_id');
-        $language = $request->input('language', 'en');
-
-        $verses = $this->verseService->search($query, $perPage, $surahId, $language);
-
-        return response()->json([
-            'success' => true,
-            'data' => $verses->items(),
-            'meta' => [
-                'current_page' => $verses->currentPage(),
-                'per_page' => $verses->perPage(),
-                'total' => $verses->total(),
-                'last_page' => $verses->lastPage(),
-            ],
+        return view('admin.quran.verses.words', [
+            'verse' => $this->verses->findForAdmin($verse) ?? abort(404),
+            'glossResources' => $this->resources->active(ResourceKind::WORD_TRANSLATION)->concat($this->resources->active(ResourceKind::WORD_TRANSLITERATION)),
         ]);
     }
 
-    /**
-     * Get all verses for a specific surah with Arabic text.
-     *
-     * GET /su/portal/v1/admin/verses/by-surah/{surahId}
-     */
-    public function bySurah(int $surahId): JsonResponse
+    public function edit(int $verse): View
     {
-        $surah = $this->surahService->findOrFail($surahId);
-        $verses = $this->verseService->getBySurah($surahId);
-
-        return response()->json([
-            'success' => true,
-            'surah' => $surah,
-            'data' => $verses->map(fn ($v) => [
-                'id' => $v->id,
-                'verse_number' => $v->verse_number,
-                'verse_key' => $v->verse_key,
-                'text' => $v->translations->first()?->text ?? '',
-            ]),
+        return view('admin.quran.verses.edit', [
+            'verse' => $this->verses->findForAdmin($verse) ?? abort(404),
+            'scriptFields' => UpdateVerseRequest::SCRIPT_FIELDS,
         ]);
     }
 
-    /**
-     * Helper: Get surahs for dropdown selector
-     * Cached for 30 minutes
-     *
-     * @return Collection
-     */
+    public function update(UpdateVerseRequest $request, int $verse): RedirectResponse|JsonResponse
+    {
+        $this->verses->findForAdmin($verse) ?? abort(404);
+        $updated = $this->verses->update($verse, VerseEditData::fromValidated($request->validated()));
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'data' => ['id' => $updated->id, 'is_locked' => $updated->is_locked]]);
+        }
+
+        return redirect()->route('admin.quran.verses.show', $verse)->with('success', __('quran.manage.saved'));
+    }
+
+    public function lock(Request $request, int $verse): RedirectResponse|JsonResponse
+    {
+        $current = $this->verses->findForAdmin($verse) ?? abort(404);
+        $this->verses->setLocked([$verse], ! $current->is_locked);
+
+        return $request->expectsJson()
+            ? response()->json(['success' => true, 'data' => ['is_locked' => ! $current->is_locked]])
+            : back()->with('success', __('quran.manage.saved'));
+    }
+
+    public function bulkLock(BulkLockVersesRequest $request): RedirectResponse|JsonResponse
+    {
+        $count = $this->verses->setLocked(array_map('intval', $request->validated('ids')), $request->boolean('locked'));
+
+        return $request->expectsJson()
+            ? response()->json(['success' => true, 'data' => ['updated' => $count]])
+            : back()->with('success', __('quran.manage.bulk_updated', ['count' => $count]));
+    }
+
+    public function updateWord(UpdateWordGlossesRequest $request, int $word): RedirectResponse|JsonResponse
+    {
+        $glosses = [];
+        foreach ((array) $request->validated('glosses') as $resourceId => $text) {
+            $glosses[(int) $resourceId] = $text === null ? null : (string) $text;
+        }
+        $this->verses->updateWordGlosses($word, $glosses);
+
+        return $request->expectsJson()
+            ? response()->json(['success' => true])
+            : back()->with('success', __('quran.manage.saved'));
+    }
 }

@@ -4,82 +4,84 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Services;
 
+use App\Domain\Quran\Enums\ResourceKind;
+use App\Domain\Quran\Enums\SectionType;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Centralised cache key definitions for the Quran domain.
+ * Centralised cache keys for the Quran domain.
  *
- * Naming convention: {module}:{entity}:{identifier}:{variant}
+ * Invalidation uses version counters rather than Cache::tags() (file/database cache
+ * drivers do not support tags) and never Cache::flush(). Every key is prefixed with
+ * the current version of its scope, so bumping a counter orphans the whole scope in
+ * one write without touching other modules' caches.
  *
- * All keys must be kept in sync with the repositories that create them so
- * that admin controllers can invalidate the right entries after writes.
+ * Scopes change independently:
+ *   - content:   chapters, sections, verses, words, translations, tafsirs, chapter
+ *                infos, reader payloads, search
+ *   - resources: the catalogue (which translations/tafsirs/reciters are active)
+ *   - reciters:  audio files, chapter audio, timestamps
+ *   - mushafs:   page layouts
+ *   - playlists: playlist listings
  *
- * Invalidation uses version counters rather than Cache::tags(), which requires
- * Redis/Memcached and is unavailable on the file/database drivers this app
- * runs on. Every key below is prefixed with the current version of its scope,
- * so bumping the counter orphans the whole scope in one write — without
- * touching any other module's cache (which Cache::flush() used to destroy).
- *
- * Two scopes exist because they change independently:
- *   - content:  surahs, verses, translations, tafsir, reader page payloads
- *   - reciters: reciters, recitations, audio URL maps
- *
- * Deliberately unversioned: the Ask-Quran AI keys (aiGroundingRules, aiAnswer)
- * are expensive LLM/MCP results that do not go stale when Quran content is
- * edited, so content edits must not evict them.
+ * Deliberately unversioned: the Ask-Quran AI keys are expensive LLM/MCP results
+ * that do not go stale when Quran content is edited.
  */
 final class QuranCacheKeys
 {
     private const CONTENT_VERSION_KEY = 'quran:cache:version:content';
 
-    /** Kept as-is: ReciterRepository has used this counter since before the scopes existed. */
+    private const RESOURCES_VERSION_KEY = 'quran:cache:version:resources';
+
     private const RECITER_VERSION_KEY = 'reciters:version';
 
-    /** Playlist listings (gallery, featured, home section, profile tab). */
+    private const MUSHAF_VERSION_KEY = 'quran:cache:version:mushafs';
+
     private const PLAYLIST_VERSION_KEY = 'playlists:version';
 
     // -----------------------------------------------------------------------
     // Invalidation
     // -----------------------------------------------------------------------
 
-    /**
-     * Invalidate every cached surah/verse/translation/tafsir/reader payload.
-     */
     public static function flushContent(): void
     {
-        // Version-orphaned entries normally age out via their TTL, but the surah
-        // name index is stored with rememberForever — forget it explicitly so a
-        // bump does not leak a permanent row per flush.
-        Cache::forget(self::surahNameIndex());
-
         self::bump(self::CONTENT_VERSION_KEY);
     }
 
     /**
-     * Invalidate every cached reciter/recitation/audio payload.
+     * The catalogue also shapes every reader payload (selected resources), so a
+     * catalogue change drops content payloads too.
      */
+    public static function flushResources(): void
+    {
+        self::bump(self::RESOURCES_VERSION_KEY);
+        self::bump(self::CONTENT_VERSION_KEY);
+    }
+
     public static function flushReciters(): void
     {
         self::bump(self::RECITER_VERSION_KEY);
     }
 
+    public static function flushMushafs(): void
+    {
+        self::bump(self::MUSHAF_VERSION_KEY);
+    }
+
     /**
-     * Invalidate every cached playlist listing. Play counts do not call this:
-     * they are eventually consistent in listings.
+     * Play counts do not call this: they are eventually consistent in listings.
      */
     public static function flushPlaylists(): void
     {
         self::bump(self::PLAYLIST_VERSION_KEY);
     }
 
-    public static function contentVersion(): int
+    public static function flushAll(): void
     {
-        return (int) Cache::get(self::CONTENT_VERSION_KEY, 0);
-    }
-
-    public static function reciterVersion(): int
-    {
-        return (int) Cache::get(self::RECITER_VERSION_KEY, 0);
+        self::flushResources();
+        self::flushReciters();
+        self::flushMushafs();
+        self::flushPlaylists();
     }
 
     private static function bump(string $versionKey): void
@@ -87,33 +89,24 @@ final class QuranCacheKeys
         Cache::forever($versionKey, ((int) Cache::get($versionKey, 0)) + 1);
     }
 
-    /**
-     * Prefix a key with the current content version.
-     */
+    private static function scoped(string $versionKey, string $prefix, string $key): string
+    {
+        return $prefix.':v'.((int) Cache::get($versionKey, 0)).':'.$key;
+    }
+
     private static function content(string $key): string
     {
-        return 'quran:v'.self::contentVersion().':'.$key;
+        return self::scoped(self::CONTENT_VERSION_KEY, 'quran', $key);
     }
 
-    /**
-     * Prefix a key with the current reciter version.
-     */
-    public static function reciterScoped(string $key): string
-    {
-        return 'reciters:v'.self::reciterVersion().':'.$key;
-    }
-
-    /**
-     * Prefix a key with the current playlist version.
-     */
     public static function playlistScoped(string $key): string
     {
-        return 'playlists:v'.((int) Cache::get(self::PLAYLIST_VERSION_KEY, 0)).':'.$key;
+        return self::scoped(self::PLAYLIST_VERSION_KEY, 'playlists', $key);
     }
 
     /**
-     * One counted play per visitor per playlist per window. Not cached content:
-     * deliberately outside the versioned family so flushPlaylists() never resets it.
+     * One counted play per visitor per playlist per window. Outside the versioned
+     * family so flushPlaylists() never resets it.
      */
     public static function playlistPlayDedupe(int $playlistId, string $visitorHash): string
     {
@@ -121,231 +114,133 @@ final class QuranCacheKeys
     }
 
     // -----------------------------------------------------------------------
-    // Surah keys (SurahRepository)
+    // Content
     // -----------------------------------------------------------------------
 
-    public static function surahAll(): string
+    public static function chapters(string $locale): string
     {
-        return self::content('surahs:all');
+        return self::content("chapters:{$locale}");
     }
 
-    public static function surahByNumber(int $number): string
+    public static function chapter(int $id, string $locale): string
     {
-        return self::content("surah:number:{$number}");
+        return self::content("chapter:{$id}:{$locale}");
     }
 
-    public static function surahsByRevelationPlace(string $place): string
+    public static function sections(SectionType $type): string
     {
-        return self::content("surahs:revelation:{$place}");
+        return self::content("sections:{$type->value}");
     }
 
-    public static function surahsByJuz(int $juz): string
+    public static function readerPayload(string $scope, string $optionsHash, string $locale): string
     {
-        return self::content("surahs:juz:{$juz}");
+        return self::content("reader:{$scope}:{$optionsHash}:{$locale}");
     }
 
-    public static function surahCountByRevelation(string $place): string
+    public static function chapterInfo(int $chapter, string $locale, ?int $resourceId): string
     {
-        return self::content("surahs:count:{$place}");
+        return self::content("chapter_info:{$chapter}:{$locale}:".($resourceId ?? 'auto'));
     }
 
-    public static function surahTotalVerses(): string
+    public static function verseOfTheDay(string $date, string $locale): string
     {
-        return self::content('total:verses');
+        return self::content("verse_of_the_day:{$date}:{$locale}");
     }
 
-    public static function surahAverageVerses(): string
+    public static function search(string $hash): string
     {
-        return self::content('surahs:avg:verses');
-    }
-
-    // -----------------------------------------------------------------------
-    // Verse keys (VerseRepository)
-    // -----------------------------------------------------------------------
-
-    public static function versesBySurah(int $surahId): string
-    {
-        return self::content("verses:surah:{$surahId}");
-    }
-
-    public static function verseBySurahAndNumber(int $surahNumber, int $verseNumber): string
-    {
-        return self::content("verse:{$surahNumber}:{$verseNumber}");
-    }
-
-    public static function versesByPage(int $page): string
-    {
-        return self::content("verses:page:{$page}");
-    }
-
-    public static function sajdaVerses(): string
-    {
-        return self::content('verses:sajda');
+        return self::content("search:{$hash}");
     }
 
     /**
-     * Printed-mushaf word layout for a surah (VerseRepository), ordered by
-     * page/line/position for line-by-line rendering on the public reader.
+     * Normalized chapter-name => number lookup (Ask-AI answer linking).
      */
-    public static function mushafWordsBySurah(int $surahNumber): string
+    public static function chapterNameIndex(): string
     {
-        return self::content("mushaf:words:surah:{$surahNumber}");
-    }
-
-    public static function sajdaVersesCount(): string
-    {
-        return self::content('verses:sajda:count');
-    }
-
-    /**
-     * Active translation editions used by the reader's edition selector
-     * (VerseRepository::getActiveTranslationResources).
-     */
-    public static function activeTranslationResources(): string
-    {
-        return self::content('translation_resources:active');
-    }
-
-    /**
-     * One translation edition's text for a whole surah (VerseRepository).
-     */
-    public static function surahTranslationByResource(int $surahNumber, int $resourceId): string
-    {
-        return self::content("surah_translation:{$surahNumber}:{$resourceId}");
+        return self::content('chapter_name_index');
     }
 
     // -----------------------------------------------------------------------
-    // Tafseer keys (TafseerRepository)
+    // Catalogue
     // -----------------------------------------------------------------------
 
-    public static function tafseerByVerseReference(string $verseReference): string
+    public static function resources(ResourceKind $kind, string $locale): string
     {
-        return self::content("tafseer:verse:{$verseReference}");
+        return self::scoped(self::RESOURCES_VERSION_KEY, 'quran_resources', "{$kind->value}:{$locale}");
     }
 
-    public static function tafseerSources(): string
+    public static function recitationStyles(): string
     {
-        return self::content('tafseer:sources');
-    }
-
-    public static function tafseerUniqueSurahs(): string
-    {
-        return self::content('tafseer:unique:surahs');
-    }
-
-    /**
-     * Active tafsir sources used by the reader's source selector
-     * (TafseerRepository::getActiveTafsirResources).
-     */
-    public static function activeTafsirResources(): string
-    {
-        return self::content('tafsir_resources:active');
+        return 'quran:recitation_styles';
     }
 
     // -----------------------------------------------------------------------
-    // Public reader page payloads (Site\QuranController)
+    // Audio
     // -----------------------------------------------------------------------
 
-    public static function publicSurahList(string $locale): string
+    public static function chapterAudio(int $chapter): string
     {
-        return self::content("public:index:{$locale}");
+        return self::scoped(self::RECITER_VERSION_KEY, 'reciters', "chapter_audio:{$chapter}");
     }
 
-    public static function publicSurahFull(int $surahNumber, string $locale): string
+    public static function chapterTimestamps(int $resourceId, int $chapter): string
     {
-        return self::content("public:surah_full:{$surahNumber}:{$locale}");
+        return self::scoped(self::RECITER_VERSION_KEY, 'reciters', "timestamps:{$resourceId}:{$chapter}");
     }
 
-    public static function publicJuz(int $juz, string $locale, int $page, int $perPage): string
+    public static function reciterPage(int $resourceId, string $locale): string
     {
-        return self::content("public:juz:{$juz}:{$locale}:{$page}:{$perPage}");
+        return self::scoped(self::RECITER_VERSION_KEY, 'reciters', "reciter:{$resourceId}:{$locale}");
     }
 
-    public static function publicHizb(int $hizb, string $locale, int $page, int $perPage): string
+    /** Player reciter list for one chapter reader page. */
+    public static function readerReciters(int $chapter, string $locale): string
     {
-        return self::content("public:hizb:{$hizb}:{$locale}:{$page}:{$perPage}");
+        return self::scoped(self::RECITER_VERSION_KEY, 'reciters', "reader:{$chapter}:{$locale}");
     }
 
-    public static function publicMushafPage(int $page, string $locale): string
+    /** Public reciters directory. */
+    public static function reciterDirectory(string $locale): string
     {
-        return self::content("public:mushaf_page:{$page}:{$locale}");
+        return self::scoped(self::RECITER_VERSION_KEY, 'reciters', "directory:{$locale}");
     }
 
-    public static function publicAsbabSurahs(string $locale): string
+    /** chapter number => juz of its first verse. */
+    public static function firstJuzMap(): string
     {
-        return self::content("public:asbab_surahs:{$locale}");
-    }
-
-    // -----------------------------------------------------------------------
-    // Reciter / recitation payloads (reciter-scoped version)
-    // -----------------------------------------------------------------------
-
-    public static function publicRecitersAudioList(): string
-    {
-        return self::reciterScoped('public:reciters_audio_list');
-    }
-
-    public static function publicReciters(string $locale): string
-    {
-        return self::reciterScoped("public:reciters:{$locale}");
-    }
-
-    public static function publicSurahAudioUrls(int $surahNumber): string
-    {
-        return self::reciterScoped("public:surah_audio_urls:{$surahNumber}");
-    }
-
-    /**
-     * Per-ayah timings for one surah of one reciter's recording
-     * (AyahTimingService). Reciter-scoped: the timings describe a recording, so
-     * a reciter edit must drop them and a content edit must not.
-     */
-    public static function surahAyahTimings(int $surahNumber, int $reciterId): string
-    {
-        return self::reciterScoped("public:surah_timings:{$surahNumber}:{$reciterId}");
+        return self::content('first_juz_map');
     }
 
     // -----------------------------------------------------------------------
-    // Shared / helper keys
+    // Mushafs
     // -----------------------------------------------------------------------
 
-    /**
-     * Selector cache used by admin controllers (VerseController, TafseerController)
-     * when populating the Surah dropdown.
-     */
-    public static function surahSelector(): string
+    public static function pageLines(int $mushaf, int $page): string
     {
-        return self::content('surahs:selector');
+        return self::scoped(self::MUSHAF_VERSION_KEY, 'quran_mushaf', "lines:{$mushaf}:{$page}");
+    }
+
+    public static function chapterInfos(int $chapter): string
+    {
+        return self::content("chapter_infos:{$chapter}");
+    }
+
+    public static function chapterLines(int $mushaf, int $chapter): string
+    {
+        return self::scoped(self::MUSHAF_VERSION_KEY, 'quran_mushaf', "chapter_lines:{$mushaf}:{$chapter}");
     }
 
     // -----------------------------------------------------------------------
-    // Ask Quran AI keys (DeepSeek + quran.ai MCP)
+    // Ask Quran AI (unversioned)
     // -----------------------------------------------------------------------
 
-    /**
-     * The quran.ai MCP grounding rules + nonce, fetched once and shared across
-     * all inquiries so the ~2.5K rules block is paid roughly once.
-     */
     public static function aiGroundingRules(): string
     {
         return 'quran:ai:grounding_rules';
     }
 
-    /**
-     * Cross-user answer cache. Keyed by the normalized-question hash + locale so
-     * an identical question (any user) is served free, without an LLM call.
-     */
     public static function aiAnswer(string $questionHash, string $locale): string
     {
         return "quran:ai:answer:{$locale}:{$questionHash}";
-    }
-
-    /**
-     * Normalized surah-name => number lookup, built once from the surahs table
-     * and used to linkify verse references written by name in AI answers.
-     */
-    public static function surahNameIndex(): string
-    {
-        return self::content('surah_name_index');
     }
 }

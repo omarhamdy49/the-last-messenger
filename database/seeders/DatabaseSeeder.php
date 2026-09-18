@@ -25,7 +25,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RolePermissionSeeder::class,
             AdminUserSeeder::class,
-            QuranReciterSeeder::class,
+            QuranMushafSeeder::class,
         ]);
 
         // Public-site content (settings, menus, home cards/chips, pages, FAQs)

@@ -28,6 +28,10 @@ class GuestPageCachingTest extends TestCase
 
         $response->assertOk();
         $this->assertStringContainsString('s-maxage=1800', (string) $response->headers->get('Cache-Control'));
+        // The visitor's own browser must revalidate: without max-age it caches
+        // heuristically, and a reader kept seeing the page from before an editor
+        // enabled new translations or tafsirs.
+        $this->assertStringContainsString('max-age=0', (string) $response->headers->get('Cache-Control'));
         $this->assertStringContainsString('stale-while-revalidate', (string) $response->headers->get('Cache-Control'));
         $this->assertNull(
             $response->headers->get('Set-Cookie'),

@@ -1,0 +1,31 @@
+{
+ "recitations": [
+  {
+   "id": 1,
+   "reciter_name": "AbdulBaset AbdulSamad",
+   "style": "Mujawwad",
+   "translated_name": {
+    "name": "AbdulBaset AbdulSamad",
+    "language_name": "english"
+   }
+  },
+  {
+   "id": 2,
+   "reciter_name": "AbdulBaset AbdulSamad",
+   "style": "Murattal",
+   "translated_name": {
+    "name": "AbdulBaset AbdulSamad",
+    "language_name": "english"
+   }
+  },
+  {
+   "id": 7,
+   "reciter_name": "Mishari Rashid al-`Afasy",
+   "style": null,
+   "translated_name": {
+    "name": "Mishari Rashid al-`Afasy",
+    "language_name": "english"
+   }
+  }
+ ]
+}

@@ -120,6 +120,15 @@
         searchQuery: '',
         suggest: { items: [], open: false, loading: false, error: false, active: -1, timer: null },
         activeFilter: 'all',
+        // Which axis the hub is listing. The surah list is the default view;
+        // ?browse=juz deep-links straight to an axis tab.
+        browse: (new URLSearchParams(location.search).get('browse') || 'surah'),
+        setBrowse(axis) {
+            this.browse = axis;
+            const url = new URL(location.href);
+            axis === 'surah' ? url.searchParams.delete('browse') : url.searchParams.set('browse', axis);
+            history.replaceState({}, '', url);
+        },
         viewMode: localStorage.getItem('quranViewMode') || 'grid',
         sortBy: localStorage.getItem('quranSortBy') || 'number',
         progress: JSON.parse(localStorage.getItem('surahProgress') || '{}'),
@@ -143,6 +152,8 @@
                 filtered = [...filtered].sort((a, b) => a.number - b.number);
             } else if (this.sortBy === 'verses') {
                 filtered = [...filtered].sort((a, b) => b.verses - a.verses);
+            } else if (this.sortBy === 'revelation') {
+                filtered = [...filtered].sort((a, b) => a.revelationOrder - b.revelationOrder);
             } else if (this.sortBy === 'name') {
                 filtered = [...filtered].sort((a, b) => a.nameAr.localeCompare(b.nameAr, 'ar'));
             }
@@ -310,6 +321,82 @@
         </div>
 
         {{-- ============================================================ --}}
+        {{-- SEARCH · VERSE OF THE DAY · CONTINUE READING                 --}}
+        {{-- ============================================================ --}}
+        <div class="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-4 stagger-1 fade-in-up">
+            <div class="lg:col-span-2 space-y-4">
+                <x-public.quran.command-bar />
+
+                @if(! empty($verseOfTheDay))
+                    <a href="{{ route('public.quran.surah', $verseOfTheDay['chapter']) }}#v{{ $verseOfTheDay['verse'] }}"
+                       class="block rounded-2xl border p-5 shadow-sm transition-shadow hover:shadow-lg"
+                       :class="$store.theme.dark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'">
+                        <p class="mb-2 flex items-center gap-2 text-sm font-semibold text-[#218838]">
+                            <i data-lucide="sun" class="w-4 h-4"></i> {{ __('quran.public.verse_of_the_day') }}
+                            <span class="font-normal opacity-80">{{ $verseOfTheDay['chapter_name'] }} <span dir="ltr">{{ $verseOfTheDay['verse_key'] }}</span></span>
+                        </p>
+                        <p class="font-['Amiri'] text-2xl leading-loose" dir="rtl" lang="ar" :class="$store.theme.dark ? 'text-white' : 'text-gray-900'">{{ $verseOfTheDay['text'] }}</p>
+                        @if(! empty($verseOfTheDay['translation']))
+                            <p class="mt-2 text-sm leading-relaxed" dir="auto" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'">{{ $verseOfTheDay['translation'] }}</p>
+                        @endif
+                    </a>
+                @endif
+            </div>
+
+            <div class="space-y-4">
+                {{-- Continue reading: the last surah opened on this device. --}}
+                <div x-data="{ last: (() => { try { return JSON.parse(localStorage.getItem('quran:last') || 'null'); } catch (e) { return null; } })() }"
+                     x-show="last && last.number" x-cloak
+                     class="rounded-2xl border p-5 shadow-sm" :class="$store.theme.dark ? 'bg-gray-900 border-gray-800' : 'bg-white border-gray-100'">
+                    <p class="mb-2 flex items-center gap-2 text-sm font-semibold text-[#0056b3]"><i data-lucide="bookmark" class="w-4 h-4"></i> {{ __('quran.public.continue_reading') }}</p>
+                    <a :href="`{{ url('/quran/surah') }}/${last?.number}` + (last?.verse ? `#v${last.verse}` : '')"
+                       class="font-['Amiri'] text-2xl font-bold hover:underline" :class="$store.theme.dark ? 'text-white' : 'text-gray-900'" x-text="last?.name"></a>
+                </div>
+                <a href="{{ route('public.quran.random') }}"
+                   class="flex items-center justify-center gap-2 rounded-2xl border p-4 font-semibold shadow-sm transition-colors"
+                   :class="$store.theme.dark ? 'bg-gray-900 border-gray-800 text-gray-200 hover:border-[#64CCC5]' : 'bg-white border-gray-100 text-gray-700 hover:border-[#218838]'">
+                    <i data-lucide="shuffle" class="w-4 h-4"></i> {{ __('quran.public.random_verse') }}
+                </a>
+                <a href="{{ route('public.quran.search') }}"
+                   class="flex items-center justify-center gap-2 rounded-2xl border p-4 font-semibold shadow-sm transition-colors"
+                   :class="$store.theme.dark ? 'bg-gray-900 border-gray-800 text-gray-200 hover:border-[#64CCC5]' : 'bg-white border-gray-100 text-gray-700 hover:border-[#218838]'">
+                    <i data-lucide="search" class="w-4 h-4"></i> {{ __('quran.public.search_title') }}
+                </a>
+            </div>
+        </div>
+
+        {{-- ============================================================ --}}
+        {{-- BROWSE TABS — surah list (default) and the mushaf axes        --}}
+        {{-- ============================================================ --}}
+        @php
+            $divisionRoutes = ['juz' => 'public.quran.juz', 'hizb' => 'public.quran.hizb', 'rub_el_hizb' => 'public.quran.rub', 'manzil' => 'public.quran.manzil', 'ruku' => 'public.quran.ruku'];
+            $surahNames = collect($surahs)->pluck('nameAr', 'number');
+            $axisTabs = ['surah' => __('quran.public.surahs_tab')] + collect($divisionRoutes)
+                ->filter(fn ($route, $type) => ! empty($sections[$type]))
+                ->map(fn ($route, $type) => __('quran.sections.'.$type))
+                ->all();
+        @endphp
+        <div class="mb-6 stagger-1 fade-in-up overflow-x-auto scrollbar-hide" role="tablist"
+             aria-label="{{ __('quran.public.browse_divisions') }}">
+            <div class="inline-flex gap-1 rounded-2xl border p-1 shadow-sm backdrop-blur-md"
+                 :class="$store.theme.dark ? 'bg-gray-900/60 border-white/5' : 'bg-white/70 border-gray-100'">
+                @foreach($axisTabs as $axis => $label)
+                    <button type="button" role="tab"
+                            @click="setBrowse('{{ $axis }}')"
+                            :aria-selected="browse === '{{ $axis }}' ? 'true' : 'false'"
+                            class="whitespace-nowrap rounded-xl px-4 py-2 text-sm font-semibold transition-all"
+                            :class="browse === '{{ $axis }}'
+                                ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-md shadow-[#0056b3]/30'
+                                : ($store.theme.dark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900')">
+                        {{ $label }}
+                    </button>
+                @endforeach
+            </div>
+        </div>
+
+
+        <div x-show="browse === 'surah'" role="tabpanel">
+        {{-- ============================================================ --}}
         {{-- CONTROLS TOOLBAR (premium unified panel) --}}
         {{-- ============================================================ --}}
         <div class="mb-8 stagger-1 fade-in-up rounded-2xl border p-3 sm:p-4 shadow-sm backdrop-blur-md"
@@ -436,6 +523,7 @@
                             <option value="number">{{ __('quran.public.sort_number') }}</option>
                             <option value="name">{{ __('quran.public.sort_name') }}</option>
                             <option value="verses">{{ __('quran.public.sort_verses') }}</option>
+                            <option value="revelation">{{ __('quran.public.sort_revelation') }}</option>
                         </select>
                         <i data-lucide="chevron-down" class="absolute end-3 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
                            :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'"></i>
@@ -498,12 +586,16 @@
                         $quickJumps = [
                             ['url' => url('/quran/juz'),  'icon' => 'layers',       'label' => __('quran.public.go_to_juz'),  'count' => 30],
                             ['url' => url('/quran/hizb'), 'icon' => 'square-stack', 'label' => __('quran.public.go_to_hizb'), 'count' => 60],
+                            ['url' => url('/quran/rub'),    'icon' => 'grid-2x2',   'label' => __('quran.public.go_to_rub'),    'count' => 240],
+                            ['url' => url('/quran/manzil'), 'icon' => 'milestone',  'label' => __('quran.public.go_to_manzil'), 'count' => 7],
                             ['url' => url('/quran/page'), 'icon' => 'file-text',    'label' => __('quran.public.go_to_page'), 'count' => 604],
                         ];
                         $quickJumpUnits = [
                             'layers'       => __('quran.nav.juz'),
                             'square-stack' => __('quran.nav.hizb'),
                             'file-text'    => __('quran.nav.page'),
+                            'grid-2x2'     => __('quran.sections.rub_el_hizb'),
+                            'milestone'    => __('quran.sections.manzil'),
                         ];
                     @endphp
                     @foreach($quickJumps as $jump)
@@ -681,10 +773,42 @@
             </template>
         </div>
 
+        </div>{{-- /surah tab --}}
+
+        {{-- ============================================================ --}}
+        {{-- ============================================================ --}}
+        @php
+            $divisionRoutes = ['juz' => 'public.quran.juz', 'hizb' => 'public.quran.hizb', 'rub_el_hizb' => 'public.quran.rub', 'manzil' => 'public.quran.manzil', 'ruku' => 'public.quran.ruku'];
+            $surahNames = collect($surahs)->pluck('nameAr', 'number');
+        @endphp
+        @if(collect($sections ?? [])->flatten(1)->isNotEmpty())
+                @foreach($divisionRoutes as $type => $routeName)
+                    @if(! empty($sections[$type]))
+                        <ul x-show="browse === '{{ $type }}'" x-cloak role="tabpanel"
+                            class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                            @foreach($sections[$type] as $section)
+                                <li>
+                                    <a href="{{ route($routeName, $section['number']) }}" class="block h-full rounded-xl border p-3 text-sm transition-colors"
+                                       :class="$store.theme.dark ? 'bg-gray-900 border-gray-800 hover:border-[#64CCC5]' : 'bg-white border-gray-100 hover:border-[#218838]'">
+                                        <span class="font-bold" :class="$store.theme.dark ? 'text-white' : 'text-gray-900'">{{ __('quran.sections.'.$type) }} {{ $section['number'] }}</span>
+                                        <span class="mt-1 block truncate" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">
+                                            @foreach(array_slice($section['verse_mapping'], 0, 2, true) as $chapter => $range)
+                                                {{ $surahNames[(int) $chapter] ?? $chapter }} <span dir="ltr">{{ $range }}</span>@if(! $loop->last) · @endif
+                                            @endforeach
+                                        </span>
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
+                    @endif
+                @endforeach
+            </section>
+        @endif
+
         {{-- ============================================================ --}}
         {{-- EMPTY STATE --}}
         {{-- ============================================================ --}}
-        <div x-show="filteredSurahs.length === 0" x-cloak class="text-center py-20">
+        <div x-show="browse === 'surah' && filteredSurahs.length === 0" x-cloak class="text-center py-20">
             <div class="inline-flex items-center justify-center w-20 h-20 rounded-full mb-6"
                  :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-200'">
                 <i data-lucide="search-x" class="w-10 h-10" :class="$store.theme.dark ? 'text-gray-600' : 'text-gray-400'"></i>

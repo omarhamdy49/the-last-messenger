@@ -1,0 +1,802 @@
+{
+ "audio_files": [
+  {
+   "id": 50001,
+   "chapter_id": 1,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/1.mp3"
+  },
+  {
+   "id": 50002,
+   "chapter_id": 2,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/2.mp3"
+  },
+  {
+   "id": 50003,
+   "chapter_id": 3,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/3.mp3"
+  },
+  {
+   "id": 50004,
+   "chapter_id": 4,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/4.mp3"
+  },
+  {
+   "id": 50005,
+   "chapter_id": 5,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/5.mp3"
+  },
+  {
+   "id": 50006,
+   "chapter_id": 6,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/6.mp3"
+  },
+  {
+   "id": 50007,
+   "chapter_id": 7,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/7.mp3"
+  },
+  {
+   "id": 50008,
+   "chapter_id": 8,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/8.mp3"
+  },
+  {
+   "id": 50009,
+   "chapter_id": 9,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/9.mp3"
+  },
+  {
+   "id": 50010,
+   "chapter_id": 10,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/10.mp3"
+  },
+  {
+   "id": 50011,
+   "chapter_id": 11,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/11.mp3"
+  },
+  {
+   "id": 50012,
+   "chapter_id": 12,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/12.mp3"
+  },
+  {
+   "id": 50013,
+   "chapter_id": 13,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/13.mp3"
+  },
+  {
+   "id": 50014,
+   "chapter_id": 14,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/14.mp3"
+  },
+  {
+   "id": 50015,
+   "chapter_id": 15,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/15.mp3"
+  },
+  {
+   "id": 50016,
+   "chapter_id": 16,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/16.mp3"
+  },
+  {
+   "id": 50017,
+   "chapter_id": 17,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/17.mp3"
+  },
+  {
+   "id": 50018,
+   "chapter_id": 18,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/18.mp3"
+  },
+  {
+   "id": 50019,
+   "chapter_id": 19,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/19.mp3"
+  },
+  {
+   "id": 50020,
+   "chapter_id": 20,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/20.mp3"
+  },
+  {
+   "id": 50021,
+   "chapter_id": 21,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/21.mp3"
+  },
+  {
+   "id": 50022,
+   "chapter_id": 22,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/22.mp3"
+  },
+  {
+   "id": 50023,
+   "chapter_id": 23,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/23.mp3"
+  },
+  {
+   "id": 50024,
+   "chapter_id": 24,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/24.mp3"
+  },
+  {
+   "id": 50025,
+   "chapter_id": 25,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/25.mp3"
+  },
+  {
+   "id": 50026,
+   "chapter_id": 26,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/26.mp3"
+  },
+  {
+   "id": 50027,
+   "chapter_id": 27,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/27.mp3"
+  },
+  {
+   "id": 50028,
+   "chapter_id": 28,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/28.mp3"
+  },
+  {
+   "id": 50029,
+   "chapter_id": 29,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/29.mp3"
+  },
+  {
+   "id": 50030,
+   "chapter_id": 30,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/30.mp3"
+  },
+  {
+   "id": 50031,
+   "chapter_id": 31,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/31.mp3"
+  },
+  {
+   "id": 50032,
+   "chapter_id": 32,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/32.mp3"
+  },
+  {
+   "id": 50033,
+   "chapter_id": 33,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/33.mp3"
+  },
+  {
+   "id": 50034,
+   "chapter_id": 34,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/34.mp3"
+  },
+  {
+   "id": 50035,
+   "chapter_id": 35,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/35.mp3"
+  },
+  {
+   "id": 50036,
+   "chapter_id": 36,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/36.mp3"
+  },
+  {
+   "id": 50037,
+   "chapter_id": 37,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/37.mp3"
+  },
+  {
+   "id": 50038,
+   "chapter_id": 38,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/38.mp3"
+  },
+  {
+   "id": 50039,
+   "chapter_id": 39,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/39.mp3"
+  },
+  {
+   "id": 50040,
+   "chapter_id": 40,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/40.mp3"
+  },
+  {
+   "id": 50041,
+   "chapter_id": 41,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/41.mp3"
+  },
+  {
+   "id": 50042,
+   "chapter_id": 42,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/42.mp3"
+  },
+  {
+   "id": 50043,
+   "chapter_id": 43,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/43.mp3"
+  },
+  {
+   "id": 50044,
+   "chapter_id": 44,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/44.mp3"
+  },
+  {
+   "id": 50045,
+   "chapter_id": 45,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/45.mp3"
+  },
+  {
+   "id": 50046,
+   "chapter_id": 46,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/46.mp3"
+  },
+  {
+   "id": 50047,
+   "chapter_id": 47,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/47.mp3"
+  },
+  {
+   "id": 50048,
+   "chapter_id": 48,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/48.mp3"
+  },
+  {
+   "id": 50049,
+   "chapter_id": 49,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/49.mp3"
+  },
+  {
+   "id": 50050,
+   "chapter_id": 50,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/50.mp3"
+  },
+  {
+   "id": 50051,
+   "chapter_id": 51,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/51.mp3"
+  },
+  {
+   "id": 50052,
+   "chapter_id": 52,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/52.mp3"
+  },
+  {
+   "id": 50053,
+   "chapter_id": 53,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/53.mp3"
+  },
+  {
+   "id": 50054,
+   "chapter_id": 54,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/54.mp3"
+  },
+  {
+   "id": 50055,
+   "chapter_id": 55,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/55.mp3"
+  },
+  {
+   "id": 50056,
+   "chapter_id": 56,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/56.mp3"
+  },
+  {
+   "id": 50057,
+   "chapter_id": 57,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/57.mp3"
+  },
+  {
+   "id": 50058,
+   "chapter_id": 58,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/58.mp3"
+  },
+  {
+   "id": 50059,
+   "chapter_id": 59,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/59.mp3"
+  },
+  {
+   "id": 50060,
+   "chapter_id": 60,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/60.mp3"
+  },
+  {
+   "id": 50061,
+   "chapter_id": 61,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/61.mp3"
+  },
+  {
+   "id": 50062,
+   "chapter_id": 62,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/62.mp3"
+  },
+  {
+   "id": 50063,
+   "chapter_id": 63,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/63.mp3"
+  },
+  {
+   "id": 50064,
+   "chapter_id": 64,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/64.mp3"
+  },
+  {
+   "id": 50065,
+   "chapter_id": 65,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/65.mp3"
+  },
+  {
+   "id": 50066,
+   "chapter_id": 66,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/66.mp3"
+  },
+  {
+   "id": 50067,
+   "chapter_id": 67,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/67.mp3"
+  },
+  {
+   "id": 50068,
+   "chapter_id": 68,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/68.mp3"
+  },
+  {
+   "id": 50069,
+   "chapter_id": 69,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/69.mp3"
+  },
+  {
+   "id": 50070,
+   "chapter_id": 70,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/70.mp3"
+  },
+  {
+   "id": 50071,
+   "chapter_id": 71,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/71.mp3"
+  },
+  {
+   "id": 50072,
+   "chapter_id": 72,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/72.mp3"
+  },
+  {
+   "id": 50073,
+   "chapter_id": 73,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/73.mp3"
+  },
+  {
+   "id": 50074,
+   "chapter_id": 74,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/74.mp3"
+  },
+  {
+   "id": 50075,
+   "chapter_id": 75,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/75.mp3"
+  },
+  {
+   "id": 50076,
+   "chapter_id": 76,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/76.mp3"
+  },
+  {
+   "id": 50077,
+   "chapter_id": 77,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/77.mp3"
+  },
+  {
+   "id": 50078,
+   "chapter_id": 78,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/78.mp3"
+  },
+  {
+   "id": 50079,
+   "chapter_id": 79,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/79.mp3"
+  },
+  {
+   "id": 50080,
+   "chapter_id": 80,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/80.mp3"
+  },
+  {
+   "id": 50081,
+   "chapter_id": 81,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/81.mp3"
+  },
+  {
+   "id": 50082,
+   "chapter_id": 82,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/82.mp3"
+  },
+  {
+   "id": 50083,
+   "chapter_id": 83,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/83.mp3"
+  },
+  {
+   "id": 50084,
+   "chapter_id": 84,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/84.mp3"
+  },
+  {
+   "id": 50085,
+   "chapter_id": 85,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/85.mp3"
+  },
+  {
+   "id": 50086,
+   "chapter_id": 86,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/86.mp3"
+  },
+  {
+   "id": 50087,
+   "chapter_id": 87,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/87.mp3"
+  },
+  {
+   "id": 50088,
+   "chapter_id": 88,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/88.mp3"
+  },
+  {
+   "id": 50089,
+   "chapter_id": 89,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/89.mp3"
+  },
+  {
+   "id": 50090,
+   "chapter_id": 90,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/90.mp3"
+  },
+  {
+   "id": 50091,
+   "chapter_id": 91,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/91.mp3"
+  },
+  {
+   "id": 50092,
+   "chapter_id": 92,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/92.mp3"
+  },
+  {
+   "id": 50093,
+   "chapter_id": 93,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/93.mp3"
+  },
+  {
+   "id": 50094,
+   "chapter_id": 94,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/94.mp3"
+  },
+  {
+   "id": 50095,
+   "chapter_id": 95,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/95.mp3"
+  },
+  {
+   "id": 50096,
+   "chapter_id": 96,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/96.mp3"
+  },
+  {
+   "id": 50097,
+   "chapter_id": 97,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/97.mp3"
+  },
+  {
+   "id": 50098,
+   "chapter_id": 98,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/98.mp3"
+  },
+  {
+   "id": 50099,
+   "chapter_id": 99,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/99.mp3"
+  },
+  {
+   "id": 50100,
+   "chapter_id": 100,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/100.mp3"
+  },
+  {
+   "id": 50101,
+   "chapter_id": 101,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/101.mp3"
+  },
+  {
+   "id": 50102,
+   "chapter_id": 102,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/102.mp3"
+  },
+  {
+   "id": 50103,
+   "chapter_id": 103,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/103.mp3"
+  },
+  {
+   "id": 50104,
+   "chapter_id": 104,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/104.mp3"
+  },
+  {
+   "id": 50105,
+   "chapter_id": 105,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/105.mp3"
+  },
+  {
+   "id": 50106,
+   "chapter_id": 106,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/106.mp3"
+  },
+  {
+   "id": 50107,
+   "chapter_id": 107,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/107.mp3"
+  },
+  {
+   "id": 50108,
+   "chapter_id": 108,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/108.mp3"
+  },
+  {
+   "id": 50109,
+   "chapter_id": 109,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/109.mp3"
+  },
+  {
+   "id": 50110,
+   "chapter_id": 110,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/110.mp3"
+  },
+  {
+   "id": 50111,
+   "chapter_id": 111,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/111.mp3"
+  },
+  {
+   "id": 50112,
+   "chapter_id": 112,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/112.mp3"
+  },
+  {
+   "id": 50113,
+   "chapter_id": 113,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/113.mp3"
+  },
+  {
+   "id": 50114,
+   "chapter_id": 114,
+   "file_size": 839808,
+   "format": "mp3",
+   "audio_url": "https://download.quranicaudio.com/qdc/mishari_al_afasy/murattal/114.mp3"
+  }
+ ]
+}

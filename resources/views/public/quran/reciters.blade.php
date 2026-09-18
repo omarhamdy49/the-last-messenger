@@ -299,7 +299,7 @@
                             <svg class="w-3.5 h-3.5 text-[#0056b3]" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
                             </svg>
-                            <span x-text="(((reciter.countryFlag || '') + ' ' + (reciter.countryName || '')).trim()) || '—'"></span>
+                            <span x-text="[reciter.styleLabel, reciter.qirat, reciter.kindLabel].filter(Boolean).join(' · ') || '—'"></span>
                         </span>
                         <span class="px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5"
                               :class="$store.theme.dark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
@@ -449,7 +449,7 @@
                     x-text="reciter.nameAr || reciter.nameEn"></h3>
                 <p class="text-[11px] truncate mb-1.5" :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'" x-text="reciter.nameEn"></p>
                 <p class="text-xs" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'"
-                   x-text="(((reciter.countryFlag || '') + ' ' + (reciter.countryName || '')).trim()) || '\u2014'"></p>
+                   x-text="[reciter.styleLabel, reciter.qirat, reciter.kindLabel].filter(Boolean).join(' · ') || '\u2014'"></p>
             </a>
         </template>
     </div>
@@ -482,7 +482,7 @@
                     </div>
                     <p class="text-xs truncate" :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'" x-text="reciter.nameEn"></p>
                     <p class="text-xs mt-1" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'"
-                       x-text="((((reciter.countryFlag || '') + ' ' + (reciter.countryName || '')).trim()) || '\u2014') + ' \u00b7 ' + (reciter.recitationsCount || 114) + ' {{ __('quran.public.recording_unit') }}'"></p>
+                       x-text="([reciter.styleLabel, reciter.qirat, reciter.kindLabel].filter(Boolean).join(' · ') || '\u2014') + ' \u00b7 ' + (reciter.recitationsCount || 114) + ' {{ __('quran.public.recording_unit') }}'"></p>
                 </div>
                 <span class="shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-colors"
                       :class="$store.theme.dark ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-500'">

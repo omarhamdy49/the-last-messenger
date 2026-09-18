@@ -4,16 +4,22 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Quran;
 
+use App\Domain\Quran\Models\Chapter;
+use App\Domain\Quran\Models\QuranResource;
+use App\Domain\Quran\Models\Translation;
+use App\Domain\Quran\Models\Verse;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 /**
- * "Ask the Quran" inquiry search endpoint. Upstream quran.com calls are faked so
- * the suite never touches the network.
+ * "Ask the Quran" inquiry search endpoint. Since 006 it searches our own tables,
+ * so there is no upstream call to fake.
  */
 final class QuranAskTest extends TestCase
 {
+    use RefreshDatabase;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -30,45 +36,34 @@ final class QuranAskTest extends TestCase
     public function test_inquiry_returns_mapped_verses(): void
     {
         app()->setLocale('en');
-        Http::fake([
-            'api.quran.com/*' => Http::response([
-                'search' => [
-                    'query' => 'mercy',
-                    'total_results' => 1,
-                    'results' => [[
-                        'verse_key' => '1:1',
-                        'text' => 'بِسْمِ ٱللَّهِ',
-                        'translations' => [['text' => 'In the name of <em>mercy</em>', 'name' => 'Sahih International']],
-                    ]],
-                ],
-            ], 200),
-        ]);
+        Chapter::factory()->number(1)->withVerses(1)->create();
+        $verse = Verse::query()->where('verse_key', '1:1')->firstOrFail();
+        $verse->update(['text_uthmani' => 'بِسْمِ ٱللَّهِ', 'text_imlaei_simple' => 'بسم الله']);
+        $edition = QuranResource::factory()->translation('en')->asDefault()->create(['name' => 'Sahih International']);
+        Translation::factory()->create(['resource_id' => $edition->id, 'verse_id' => $verse->id, 'text' => 'In the name of mercy']);
 
-        $this->getJson(route('public.quran.ask.search', ['q' => 'mercy']))
+        $this->withSession(['locale' => 'en'])->getJson(route('public.quran.ask.search', ['q' => 'mercy']))
             ->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonPath('results.0.verseKey', '1:1')
             ->assertJsonPath('results.0.surah', 1)
             ->assertJsonPath('results.0.url', url('/quran/1').'#v1')
-            ->assertJsonPath('results.0.translation', 'In the name of mercy') // <em> stripped
+            ->assertJsonPath('results.0.translation', 'In the name of mercy')
             ->assertJsonPath('translationName', 'Sahih International');
     }
 
     public function test_arabic_definite_article_fallback(): void
     {
         app()->setLocale('ar');
-        // First call (الصبر) returns nothing; the service retries without the
-        // definite article (صبر), which matches — and echoes the original query.
-        Http::fake([
-            'api.quran.com/*' => Http::sequence()
-                ->push(['search' => ['total_results' => 0, 'results' => []]], 200)
-                ->push(['search' => ['total_results' => 1, 'results' => [[
-                    'verse_key' => '2:153',
-                    'text' => 'وَٱصْبِرُوا',
-                ]]]], 200),
+        // "الصبر" matches nothing; the service retries without the definite article
+        // ("صبر"), which matches — and echoes the original query back.
+        Chapter::factory()->number(2)->withVerses(153)->create();
+        Verse::query()->where('verse_key', '2:153')->update([
+            'text_uthmani' => 'وَٱصْبِرُوا',
+            'text_imlaei_simple' => 'واصبروا صبر',
         ]);
 
-        $this->getJson(route('public.quran.ask.search', ['q' => 'الصبر']))
+        $this->withSession(['locale' => 'ar'])->getJson(route('public.quran.ask.search', ['q' => 'الصبر']))
             ->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonPath('query', 'الصبر')
@@ -76,12 +71,14 @@ final class QuranAskTest extends TestCase
             ->assertJsonPath('results.0.translation', null); // Arabic locale: no translation
     }
 
-    public function test_upstream_failure_returns_502(): void
+    public function test_a_query_with_no_match_returns_an_empty_result(): void
     {
-        Http::fake(['api.quran.com/*' => Http::response('', 500)]);
+        app()->setLocale('en');
+        Chapter::factory()->number(1)->withVerses(1)->create();
 
-        $this->getJson(route('public.quran.ask.search', ['q' => 'mercy']))
-            ->assertStatus(502)
-            ->assertJsonStructure(['message']);
+        $this->withSession(['locale' => 'en'])->getJson(route('public.quran.ask.search', ['q' => 'zzzznomatch']))
+            ->assertOk()
+            ->assertJsonPath('total', 0)
+            ->assertJsonPath('results', []);
     }
 }

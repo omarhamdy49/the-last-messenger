@@ -67,7 +67,7 @@ return [
     'usage' => [
         'seerah_events' => ':count events',
         'muslims' => ':count people',
-        'quran_surahs' => ':count surahs',
+        'quran_chapters' => ':count surahs',
     ],
     'types' => [
         'city' => 'City',

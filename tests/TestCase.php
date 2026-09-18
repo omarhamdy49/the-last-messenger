@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests;
 
+use App\Models\ApiClient;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -13,6 +14,70 @@ use Spatie\Permission\PermissionRegistrar;
 abstract class TestCase extends BaseTestCase
 {
     use CreatesApplication;
+
+    /**
+     * Every /api/v1 route (except health) requires an API client (006). Requests to
+     * /api/* made by a test automatically carry the credentials of a full-scope test
+     * client, created on first use, unless the test already sent X-Api-Key or called
+     * withoutApiClient() to exercise the unauthenticated path.
+     */
+    protected bool $sendApiClient = true;
+
+    /** @var array<string, string>|null */
+    private ?array $apiClientHeaders = null;
+
+    public const TEST_API_SECRET = 'test-secret';
+
+    protected function withoutApiClient(): static
+    {
+        $this->sendApiClient = false;
+
+        return $this;
+    }
+
+    /**
+     * Headers of the default test API client (created on first call).
+     *
+     * @param  list<string>  $scopes
+     * @return array<string, string>
+     */
+    protected function apiClientHeaders(array $scopes = ['*']): array
+    {
+        if ($scopes !== ['*']) {
+            $client = ApiClient::factory()->withSecret(self::TEST_API_SECRET)->scopes($scopes)->create(['rate_limit_per_minute' => 10_000]);
+
+            return ['X-Api-Key' => $client->key, 'X-Api-Secret' => self::TEST_API_SECRET];
+        }
+
+        if ($this->apiClientHeaders === null) {
+            $client = ApiClient::factory()->withSecret(self::TEST_API_SECRET)->create(['rate_limit_per_minute' => 10_000]);
+            $this->apiClientHeaders = ['X-Api-Key' => $client->key, 'X-Api-Secret' => self::TEST_API_SECRET];
+        }
+
+        return $this->apiClientHeaders;
+    }
+
+    /**
+     * @param  string  $method
+     * @param  string  $uri
+     * @param  array<string, mixed>  $parameters
+     * @param  array<string, mixed>  $cookies
+     * @param  array<string, mixed>  $files
+     * @param  array<string, mixed>  $server
+     * @param  string|null  $content
+     */
+    public function call($method, $uri, $parameters = [], $cookies = [], $files = [], $server = [], $content = null)
+    {
+        // parse_url() returns false for a path segment containing a colon
+        // (`/api/v1/quran/verses/by_key/2:255`), so strip the query by hand.
+        $path = ltrim(strtok((string) $uri, '?') ?: '', '/');
+
+        if ($this->sendApiClient && str_starts_with($path, 'api/') && ! isset($server['HTTP_X_API_KEY'])) {
+            $server = array_merge($this->transformHeadersToServerVars($this->apiClientHeaders()), $server);
+        }
+
+        return parent::call($method, $uri, $parameters, $cookies, $files, $server, $content);
+    }
 
     /**
      * Never let a Blade view's @vite directive depend on a frontend build.

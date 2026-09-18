@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -15,32 +14,16 @@ use Illuminate\Support\Facades\Schema;
  * so their foreign keys cannot resolve on a fresh build. The surviving tables
  * below are unaffected.
  *
+ * `reciter_translations` was removed by 006-quran-qf-refactor: reciters are rows of
+ * quran_resources with names in quran_resource_translations.
+ *
  * Remaining:
- * - reciter_translations
  * - language_translations
  */
 return new class extends Migration
 {
     public function up(): void
     {
-        if (! Schema::hasTable('reciter_translations')) {
-            Schema::create('reciter_translations', function (Blueprint $table) {
-                $table->id();
-                $table->foreignId('reciter_id')->constrained('quran_reciters')->cascadeOnDelete();
-                $table->string('locale', 5);
-                $table->string('name')->nullable();
-                $table->longText('description')->nullable();
-                $table->boolean('is_ready')->default(false);
-                $table->timestamps();
-                $table->unique(['reciter_id', 'locale']);
-                $table->index('locale');
-            });
-
-            if (DB::getDriverName() === 'mysql') {
-                DB::statement('ALTER TABLE reciter_translations ADD FULLTEXT INDEX ft_reciter_translations (name, description)');
-            }
-        }
-
         if (! Schema::hasTable('language_translations')) {
             Schema::create('language_translations', function (Blueprint $table) {
                 $table->id();
@@ -63,6 +46,5 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('language_translations');
-        Schema::dropIfExists('reciter_translations');
     }
 };

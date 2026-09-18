@@ -13,14 +13,14 @@ final class PlaylistRepository
 {
     /**
      * Everything a card or the playlist page needs, columns constrained.
-     * Reciter names live in quran_reciter_profile_translations.
+     * Reciter names live in quran_resource_translations.
      */
     private const WITH = [
         'owner:id,name,avatar_path',
-        'items.surah:id,name_ar,name_en,transliteration,verses_count',
-        'items.reciter:id,profile_id,style,riwayah,slug',
-        'items.reciter.profile:id,slug,profile_image,country',
-        'items.reciter.profile.translations:id,profile_id,locale,name',
+        'items.chapter:id,name_arabic,name_simple,verses_count',
+        'items.chapter.translations:id,chapter_id,locale,name',
+        'items.reciter:id,kind,slug,name,style,qirat,image',
+        'items.reciter.translations:id,resource_id,locale,name',
     ];
 
     private function base(): Builder

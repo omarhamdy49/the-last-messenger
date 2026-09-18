@@ -57,19 +57,7 @@
                 @foreach(['arabic' => __('quran.public.mode_arabic'), 'translation' => __('quran.public.mode_translation'), 'both' => __('quran.public.mode_both')] as $mode => $label)
                 <button type="button" @click="setReadingMode('{{ $mode }}')" class="mushaf-pop-opt" :class="readingMode === '{{ $mode }}' ? 'is-on' : ''">{{ $label }}</button>
                 @endforeach
-            </div>
-        </div>
-
-        {{-- Font size --}}
-        <div class="mushaf-rail-item">
-            <button type="button" @click="panel = panel === 'font' ? null : 'font'"
-                class="mushaf-rail-btn" :class="panel === 'font' ? 'is-active' : ''"
-                title="{{ __('quran.public.filter_font') }}" aria-label="{{ __('quran.public.filter_font') }}">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 18 8.5 7l4.5 11M5.4 14h6.2M15 18l3-8 3 8m-5.3-2.8h4.6"/></svg>
-                <span class="mushaf-rail-label">{{ __('quran.public.filter_font') }}</span>
-            </button>
-            <div x-show="panel === 'font'" x-cloak x-transition.opacity class="mushaf-rail-pop" :class="$store.theme.dark ? 'mushaf-pop-dark' : ''">
-                <p class="mushaf-pop-title">{{ __('quran.public.filter_font') }}</p>
+                <p class="mushaf-pop-title mt-3">{{ __('quran.public.filter_font') }}</p>
                 <div class="flex items-center gap-2">
                     <button type="button" @click="adjustFontSize(-2)" class="mushaf-step-btn" aria-label="{{ __('quran.public.decrease_font') }}">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M20 12H4"/></svg>
@@ -79,6 +67,9 @@
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 4v16m8-8H4"/></svg>
                     </button>
                 </div>
+                <p class="mushaf-pop-title mt-3">{{ __('quran.public.mushaf_font') }}</p>
+                <button type="button" @click="setGlyphMode(false)" class="mushaf-pop-opt" :class="!glyphMode ? 'is-on' : ''">{{ __('quran.public.mushaf_font_unicode') }}</button>
+                <button type="button" @click="setGlyphMode(true); setViewMode('reading')" class="mushaf-pop-opt" :class="glyphMode ? 'is-on' : ''">{{ __('quran.public.mushaf_font_qcf') }}</button>
             </div>
         </div>
 
@@ -93,7 +84,7 @@
         </button>
 
         {{-- Settings: translation edition + tafsir source (filters, tucked away) --}}
-        <div class="mushaf-rail-item" x-show="editionsForLang.length > 1 || tafsirResources.length > 1 || reciters.length > 1" x-cloak>
+        <div class="mushaf-rail-item">
             <button type="button" @click="panel = panel === 'settings' ? null : 'settings'"
                 class="mushaf-rail-btn" :class="panel === 'settings' ? 'is-active' : ''"
                 title="{{ __('quran.public.display_settings') }}" aria-label="{{ __('quran.public.display_settings') }}">
@@ -101,13 +92,28 @@
                 <span class="mushaf-rail-label">{{ __('quran.public.rail_settings') }}</span>
             </button>
             <div x-show="panel === 'settings'" x-cloak x-transition.opacity class="mushaf-rail-pop mushaf-rail-pop-wide" :class="$store.theme.dark ? 'mushaf-pop-dark' : ''">
-                <div x-show="editionsForLang.length > 1">
+                <div>
+                    <p class="mushaf-pop-title">{{ __('quran.public.script') }}</p>
+                    {{-- :selected on the option, not :value on the select: the options are
+                         rendered by x-for after the select is bound, so the value had
+                         nothing to match yet and the list always showed the first script. --}}
+                    <select @change="setScript($event.target.value)" class="mushaf-pop-select">
+                        <template x-for="script in scripts" :key="script.value"><option :value="script.value" :selected="script.value === selectedScript" x-text="script.label"></option></template>
+                    </select>
+                    <label class="mt-2 flex items-center gap-2 text-sm font-semibold">
+                        <input type="checkbox" :checked="wordByWord" @change="toggleWordByWord()" class="rounded text-[#218838]">
+                        {{ __('quran.public.word_by_word') }}
+                    </label>
+                </div>
+                <div x-show="editionsForLang.length > 1" class="mt-3">
                     <p class="mushaf-pop-title">{{ __('quran.public.translation_edition') }}</p>
                     <select x-model.number="selectedTranslationId" @change="setTranslationEdition(selectedTranslationId)" class="mushaf-pop-select">
-                        @foreach($translationResources as $tr)
-                            @if($tr['language'] === $defaultTranslationLang)
-                            <option value="{{ $tr['id'] }}">{{ $tr['name'] }}</option>
-                            @endif
+                        @foreach(collect($translationResources)->groupBy('language') as $language => $editions)
+                            <optgroup label="{{ strtoupper((string) $language) }}">
+                                @foreach($editions as $tr)
+                                    <option value="{{ $tr['id'] }}">{{ $tr['name'] }}</option>
+                                @endforeach
+                            </optgroup>
                         @endforeach
                     </select>
                 </div>
@@ -121,14 +127,14 @@
                 </div>
                 <div x-show="reciters.length > 1" class="mt-3">
                     <p class="mushaf-pop-title">{{ __('quran.public.reciter') }}</p>
-                    <select :value="$store.audioPlayer.currentReciter()?.profileId || $store.audioPlayer.reciterId" @change="$store.audioPlayer.selectPerson(Number($event.target.value))" class="w-full rounded-lg border-gray-300 dark:bg-gray-800">
-                        <template x-for="person in $store.audioPlayer.personOptions()" :key="person.id"><option :value="person.id" x-text="person.name"></option></template>
+                    {{-- Every recording in one list: a reciter with two styles is two
+                         rows, already labelled apart by the server. --}}
+                    {{-- :selected on the option — see the script select above. --}}
+                    <select @change="$store.audioPlayer.selectReciter(Number($event.target.value))" class="w-full rounded-lg border-gray-300 dark:bg-gray-800">
+                        <template x-for="r in $store.audioPlayer.reciters" :key="r.id">
+                            <option :value="r.id" :selected="r.id === $store.audioPlayer.reciterId" x-text="(r.nameAr || r.nameEn) + ([r.recordingLabel, r.kindLabel].filter(Boolean).length ? ' — ' + [r.recordingLabel, r.kindLabel].filter(Boolean).join(' · ') : '')"></option>
+                        </template>
                     </select>
-                    <label class="block mt-3" x-show="$store.audioPlayer.recordingOptions().length > 1">{{ __('quran.recordings.choose') }}
-                        <select :value="$store.audioPlayer.reciterId" @change="$store.audioPlayer.selectReciter(Number($event.target.value))" class="w-full rounded-lg border-gray-300 dark:bg-gray-800">
-                            <template x-for="r in $store.audioPlayer.recordingOptions()" :key="r.id"><option :value="r.id" x-text="r.recordingLabel || r.nameAr || r.nameEn"></option></template>
-                        </select>
-                    </label>
                 </div>
             </div>
         </div>

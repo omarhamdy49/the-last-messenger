@@ -28,6 +28,15 @@
             ][$roleQuery] ?? 'muslims');
     }
 
+    // Quran pages live under /quran/{area}; resource lists add the kind segment.
+    if ($activeSegment === 'quran') {
+        $area = $parts[1] ?? 'chapters';
+        $kindSegment = $parts[2] ?? null;
+        $activeSegment = $area === 'resources' && is_string($kindSegment) && ! ctype_digit($kindSegment)
+            ? 'quran-resources-'.$kindSegment
+            : 'quran-'.$area;
+    }
+
     // Map segments to which parent submenu should be open
     $submenuMap = [
         'articles'        => 'content',
@@ -44,15 +53,6 @@
         'muslims-scholars'  => 'muslims',
         'islamic-roles'     => 'muslims',
         'genealogy'         => 'muslims',
-        'quran'           => 'quran',
-        'surahs'          => 'quran',
-        'verses'          => 'quran',
-        'tafseer'         => 'quran',
-        'reciters'        => 'quran',
-        'reciter-profiles' => 'quran',
-        'translation-resources' => 'quran',
-        'tafsir-resources' => 'quran',
-        'revelation-contexts' => 'quran',
         'ai-inquiries'    => 'quran',
         'playlists'       => 'quran',
         'media-programs'  => 'media',
@@ -68,7 +68,7 @@
         'contact-messages' => 'site-content',
         'imports'         => 'site-content',
     ];
-    $initialSubmenu = $submenuMap[$activeSegment] ?? '';
+    $initialSubmenu = $submenuMap[$activeSegment] ?? (str_starts_with($activeSegment, 'quran-') ? 'quran' : '');
 
     // Unread contact messages badge for the Site Content group
     $contentUnreadCount = app(\App\Domain\Content\Services\ContactMessageService::class)->unreadCount();
@@ -480,10 +480,24 @@
 
 
             <!-- Quran Management -->
+            @php
+                $quranNav = [
+                    ['key' => 'quran-chapters', 'route' => route('admin.quran.chapters.index'), 'icon' => 'book-open', 'label' => __('quran.manage.chapters')],
+                    ['key' => 'quran-verses', 'route' => route('admin.quran.verses.index'), 'icon' => 'text', 'label' => __('quran.manage.verses')],
+                    ['key' => 'quran-sections', 'route' => route('admin.quran.sections.index', 'juz'), 'icon' => 'layout-list', 'label' => __('quran.manage.sections')],
+                    ['key' => 'quran-mushafs', 'route' => route('admin.quran.mushafs.index'), 'icon' => 'book', 'label' => __('quran.manage.mushafs')],
+                    ['key' => 'quran-languages', 'route' => route('admin.quran.languages.index'), 'icon' => 'languages', 'label' => __('quran.manage.languages')],
+                ];
+                foreach (\App\Domain\Quran\Enums\ResourceKind::cases() as $quranKind) {
+                    $quranNav[] = ['key' => 'quran-resources-'.$quranKind->routeSegment(), 'route' => route('admin.quran.resources.index', $quranKind->routeSegment()), 'icon' => $quranKind->isReciter() ? 'mic' : 'library', 'label' => $quranKind->label()];
+                }
+                $quranNav[] = ['key' => 'quran-sync', 'route' => route('admin.quran.sync.index'), 'icon' => 'refresh-cw', 'label' => __('quran.manage.sync')];
+                $quranNav[] = ['key' => 'playlists', 'route' => route('admin.playlists.index'), 'icon' => 'list-music', 'label' => __('quran.playlists_admin.title')];
+                $quranNav[] = ['key' => 'ai-inquiries', 'route' => route('admin.quran.ai-inquiries.index'), 'icon' => 'sparkles', 'label' => __('admin.quran_ai_inquiries')];
+            @endphp
             <div>
                 <button @click="toggleSubmenu('quran')"
-                        :class="openSubmenu === 'quran' ||
-                                ['quran','surahs','verses','tafseer','reciters','reciter-profiles','translation-resources','tafsir-resources','revelation-contexts','ai-inquiries','playlists'].includes(activeMenu) ?
+                        :class="openSubmenu === 'quran' || @js(array_column($quranNav, 'key')).includes(activeMenu) ?
                             'bg-gradient-primary text-white shadow-lg' :
                             (darkMode ? 'text-gray-300 hover:bg-gray-800/50' : 'text-gray-700 hover:bg-gray-100')"
                         class="w-full flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all group">
@@ -498,87 +512,17 @@
 
                 <div x-show="openSubmenu === 'quran'"
                      class="mt-2 ms-6 space-y-1">
-                    <a href="{{ route('admin.surahs.index') }}"
-                       @click="activeMenu = 'surahs'"
-                       :class="isActive('surahs') ?
-                           'text-accent font-semibold' :
-                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
-                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="book-open" class="w-4 h-4"></i>
-                        <span>{{ __('quran.surahs.title') }}</span>
-                    </a>
-                    <a href="{{ route('admin.verses.index') }}"
-                       @click="activeMenu = 'verses'"
-                       :class="isActive('verses') ?
-                           'text-accent font-semibold' :
-                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
-                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="text" class="w-4 h-4"></i>
-                        <span>{{ __('quran.verses.title') }}</span>
-                    </a>
-                    <a href="{{ route('admin.tafseer.index') }}"
-                       @click="activeMenu = 'tafseer'"
-                       :class="isActive('tafseer') ?
-                           'text-accent font-semibold' :
-                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
-                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="message-square-text" class="w-4 h-4"></i>
-                        <span>{{ __('quran.tafseer.title') }}</span>
-                    </a>
-                    <a href="{{ route('admin.reciter-profiles.index') }}"
-                       @click="activeMenu = 'reciter-profiles'"
-                       :class="isActive('reciter-profiles') ?
-                           'text-accent font-semibold' :
-                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
-                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="users" class="w-4 h-4"></i>
-                        <span>{{ __('quran.recordings.profiles') }}</span>
-                    </a>
-                    <a href="{{ route('admin.playlists.index') }}"
-                       @click="activeMenu = 'playlists'"
-                       :class="isActive('playlists') ?
-                           'text-accent font-semibold' :
-                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
-                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="list-music" class="w-4 h-4"></i>
-                        <span>{{ __('quran.playlists_admin.title') }}</span>
-                    </a>
-                    <a href="{{ route('admin.reciters.index', ['recordings' => 1]) }}"
-                       @click="activeMenu = 'reciters'"
-                       :class="isActive('reciters') ?
-                           'text-accent font-semibold' :
-                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
-                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="disc-3" class="w-4 h-4"></i>
-                        <span>{{ __('quran.recordings.recordings') }}</span>
-                    </a>
-                    <a href="{{ route('admin.translation-resources.index') }}"
-                       @click="activeMenu = 'translation-resources'"
-                       :class="isActive('translation-resources') ?
-                           'text-accent font-semibold' :
-                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
-                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="languages" class="w-4 h-4"></i>
-                        <span>{{ __('quran.admin.translation_sources') }}</span>
-                    </a>
-                    <a href="{{ route('admin.tafsir-resources.index') }}"
-                       @click="activeMenu = 'tafsir-resources'"
-                       :class="isActive('tafsir-resources') ?
-                           'text-accent font-semibold' :
-                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
-                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="book-marked" class="w-4 h-4"></i>
-                        <span>{{ __('quran.admin.tafsir_sources') }}</span>
-                    </a>
-                    <a href="{{ route('admin.quran.ai-inquiries.index') }}"
-                       @click="activeMenu = 'ai-inquiries'"
-                       :class="isActive('ai-inquiries') ?
-                           'text-accent font-semibold' :
-                           (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
-                       class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
-                        <i data-lucide="sparkles" class="w-4 h-4"></i>
-                        <span>{{ __('admin.quran_ai_inquiries') }}</span>
-                    </a>
+                    @foreach ($quranNav as $item)
+                        <a href="{{ $item['route'] }}"
+                           @click="activeMenu = '{{ $item['key'] }}'"
+                           :class="isActive('{{ $item['key'] }}') ?
+                               'text-accent font-semibold' :
+                               (darkMode ? 'text-gray-400 hover:text-white' : 'text-gray-600 hover:text-gray-900')"
+                           class="flex items-center gap-2 px-4 py-2 rounded-lg transition-colors">
+                            <i data-lucide="{{ $item['icon'] }}" class="w-4 h-4"></i>
+                            <span>{{ $item['label'] }}</span>
+                        </a>
+                    @endforeach
                 </div>
             </div>
 

@@ -25,7 +25,7 @@ final class UpdatePlaylistRequest extends FormRequest
             'is_public' => ['sometimes', 'boolean'],
             'is_featured' => ['sometimes', 'boolean'],
             'items' => ['sometimes', 'array', 'max:114'],
-            'items.*' => ['nullable', 'integer', Rule::exists('quran_reciters', 'id')],
+            'items.*' => ['nullable', 'integer', Rule::exists('quran_resources', 'id')->where('kind', 'chapter_reciter')],
         ];
     }
 

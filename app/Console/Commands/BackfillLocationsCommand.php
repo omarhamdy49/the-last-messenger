@@ -135,14 +135,14 @@ class BackfillLocationsCommand extends Command
      */
     private function backfillSurahs(bool $dryRun): array
     {
-        $report = $this->emptyReport('quran_surahs');
+        $report = $this->emptyReport('quran_chapters');
 
         $map = [
             'makkah' => DB::table('locations')->where('slug', 'makkah')->value('id'),
             'madinah' => DB::table('locations')->where('slug', 'al-madinah')->value('id'),
         ];
 
-        DB::table('quran_surahs')
+        DB::table('quran_chapters')
             ->select(['id', 'revelation_place', 'revelation_location_id'])
             ->orderBy('id')
             ->chunkById(self::CHUNK, function ($rows) use (&$report, $map, $dryRun): void {
@@ -174,7 +174,7 @@ class BackfillLocationsCommand extends Command
                 }
 
                 if (! $dryRun && $updates !== []) {
-                    $this->applyUpdates('quran_surahs', 'revelation_location_id', $updates);
+                    $this->applyUpdates('quran_chapters', 'revelation_location_id', $updates);
                 }
             });
 

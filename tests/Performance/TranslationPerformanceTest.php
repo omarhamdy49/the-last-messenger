@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Tests\Performance;
 
 use App\Domain\Hadith\Models\Hadith;
-use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Models\Chapter;
 use App\Domain\Shared\Services\LanguageCacheService;
 use App\Models\Article;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -292,7 +292,7 @@ class TranslationPerformanceTest extends TestCase
         echo "\nDatabase Statistics:\n";
         echo sprintf("  - Articles: %d\n", Article::count());
         echo sprintf("  - Hadith: %d\n", Hadith::count());
-        echo sprintf("  - Surahs: %d\n", Surah::count());
+        echo sprintf("  - Surahs: %d\n", Chapter::count());
 
         $this->assertTrue(true, 'Performance summary generated');
     }

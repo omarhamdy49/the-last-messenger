@@ -132,8 +132,7 @@ final class DevContentFixturesSeeder extends Seeder
      */
     private function seedQuran(): void
     {
-        $arabicResource = $this->translationResource('quran-uthmani', 'المصحف العثماني', 'ar', 'rtl', true);
-        $englishResource = $this->translationResource('sahih-international', 'Sahih International', 'en', 'ltr', false);
+        $englishResource = $this->translationResource('sahih-international', 'Sahih International', 'en', 'ltr', true);
 
         $surahs = [
             [
@@ -170,18 +169,24 @@ final class DevContentFixturesSeeder extends Seeder
             ],
         ];
 
+        // quran_verses.id is the QF verse id (1..6236, not auto-increment), so these
+        // fixtures number their verses sequentially from 1 in seeding order.
+        $verseId = 0;
+
         foreach ($surahs as $surah) {
-            DB::table('quran_surahs')->updateOrInsert(
+            DB::table('quran_chapters')->updateOrInsert(
                 ['id' => $surah['id']],
                 [
                     'revelation_place' => $surah['revelation_place'],
                     'revelation_order' => $surah['revelation_order'],
                     'bismillah_pre' => $surah['bismillah_pre'],
-                    'name_ar' => $surah['name_ar'],
-                    'name_en' => $surah['name_en'],
-                    'transliteration' => $surah['transliteration'],
+                    'name_arabic' => $surah['name_ar'],
+                    'name_simple' => $surah['name_en'],
+                    'name_complex' => $surah['transliteration'],
                     'verses_count' => count($surah['verses']),
-                    'pages' => json_encode([$surah['page'], $surah['page']]),
+                    'first_page' => $surah['page'],
+                    'last_page' => $surah['page'],
+                    'is_published' => 1,
                     'updated_at' => $this->now(),
                     'created_at' => $this->now(),
                 ]
@@ -194,8 +199,12 @@ final class DevContentFixturesSeeder extends Seeder
                 DB::table('quran_verses')->updateOrInsert(
                     ['verse_key' => $key],
                     [
-                        'surah_id' => $surah['id'],
+                        'id' => ++$verseId,
+                        'chapter_id' => $surah['id'],
+                        'verse_index' => $verseId,
                         'verse_number' => $number,
+                        'text_uthmani' => $arabic,
+                        'text_imlaei_simple' => preg_replace('/[\x{0610}-\x{061A}\x{064B}-\x{065F}\x{0670}]/u', '', $arabic),
                         'juz_number' => $surah['juz'],
                         'hizb_number' => (int) ceil($surah['juz'] * 2),
                         'rub_el_hizb_number' => (int) ceil($surah['juz'] * 8),
@@ -208,41 +217,44 @@ final class DevContentFixturesSeeder extends Seeder
                     ]
                 );
 
-                $verseId = (int) DB::table('quran_verses')->where('verse_key', $key)->value('id');
+                $insertedId = (int) DB::table('quran_verses')->where('verse_key', $key)->value('id');
 
-                foreach ([[$arabicResource, 'ar', $arabic], [$englishResource, 'en', $english]] as [$resourceId, $lang, $text]) {
-                    DB::table('quran_verse_translations')->updateOrInsert(
-                        ['verse_id' => $verseId, 'resource_id' => $resourceId, 'lang' => $lang],
-                        [
-                            'text' => $text,
-                            'text_notashkeel' => preg_replace('/[\x{0610}-\x{061A}\x{064B}-\x{065F}\x{0670}]/u', '', $text),
-                            'updated_at' => $this->now(),
-                            'created_at' => $this->now(),
-                        ]
-                    );
-                }
+                // Only the English rendering is a translation row; the Arabic is the
+                // verse text itself, which now lives on quran_verses.
+                DB::table('quran_translations')->updateOrInsert(
+                    ['verse_id' => $insertedId, 'resource_id' => $englishResource],
+                    ['text' => $english, 'updated_at' => $this->now(), 'created_at' => $this->now()]
+                );
             }
         }
     }
 
     private function translationResource(string $slug, string $name, string $language, string $direction, bool $isDefault): int
     {
-        DB::table('quran_translation_resources')->updateOrInsert(
-            ['slug' => $slug],
+        DB::table('quran_resources')->updateOrInsert(
+            ['kind' => 'translation', 'slug' => $slug],
             [
-                'name' => json_encode(['ar' => $name, 'en' => $name], JSON_UNESCAPED_UNICODE),
-                'author' => $name,
-                'language' => $language,
-                'direction' => $direction,
+                'source' => 'manual',
+                'name' => $name,
+                'author_name' => $name,
+                'language_iso' => $language,
                 'is_default' => $isDefault ? 1 : 0,
                 'is_active' => 1,
+                'sync_enabled' => 0,
                 'display_order' => $isDefault ? 0 : 1,
                 'updated_at' => $this->now(),
                 'created_at' => $this->now(),
             ]
         );
 
-        return (int) DB::table('quran_translation_resources')->where('slug', $slug)->value('id');
+        $id = (int) DB::table('quran_resources')->where('kind', 'translation')->where('slug', $slug)->value('id');
+
+        DB::table('quran_resource_translations')->updateOrInsert(
+            ['resource_id' => $id, 'locale' => $language],
+            ['name' => $name, 'updated_at' => $this->now(), 'created_at' => $this->now()]
+        );
+
+        return $id;
     }
 
     private function seedHadith(): void

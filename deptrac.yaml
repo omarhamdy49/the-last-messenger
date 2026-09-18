@@ -117,6 +117,10 @@ deptrac:
         - type: directory
           value: app/Domain/Hadith/
 
+    # 2026-09-18 (006-quran-qf-refactor): app/Domain/Quran/Import/** (the Quran
+    # Foundation client, importers, sync and reciter fetchers) belongs to this layer.
+    # It must not import App\Http\** or App\Jobs\** — commands and jobs call into
+    # it, never the reverse.
     - name: DomainQuran
       collectors:
         - type: directory

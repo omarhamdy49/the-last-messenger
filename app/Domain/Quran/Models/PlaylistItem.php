@@ -7,32 +7,41 @@ namespace App\Domain\Quran\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * One chapter in a playlist and the chapter reciter chosen to play it.
+ *
+ * @property int $id
+ * @property int $playlist_id
+ * @property int $chapter_id
+ * @property int|null $resource_id a quran_resources row of kind chapter_reciter
+ */
 class PlaylistItem extends Model
 {
     protected $table = 'quran_playlist_items';
 
-    public $timestamps = false;
+    protected $fillable = ['playlist_id', 'chapter_id', 'resource_id'];
 
-    protected $fillable = ['playlist_id', 'surah_id', 'reciter_id'];
-
-    protected $casts = ['surah_id' => 'integer', 'reciter_id' => 'integer'];
+    protected $casts = [
+        'playlist_id' => 'integer',
+        'chapter_id' => 'integer',
+        'resource_id' => 'integer',
+    ];
 
     public function playlist(): BelongsTo
     {
         return $this->belongsTo(Playlist::class, 'playlist_id');
     }
 
-    public function surah(): BelongsTo
+    public function chapter(): BelongsTo
     {
-        return $this->belongsTo(Surah::class, 'surah_id');
+        return $this->belongsTo(Chapter::class, 'chapter_id');
     }
 
     /**
-     * The recording (not the person). Sources are eager-loaded on Reciter by
-     * default and never needed here.
+     * The chapter reciter (a QuranResource), not the person.
      */
     public function reciter(): BelongsTo
     {
-        return $this->belongsTo(Reciter::class, 'reciter_id')->without('sources');
+        return $this->belongsTo(QuranResource::class, 'resource_id');
     }
 }

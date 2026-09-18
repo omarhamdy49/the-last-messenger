@@ -118,9 +118,11 @@ class LocationDeleteGuardTest extends TestCase
         $this->actingAs($this->createAdminUser());
         $location = Location::factory()->create();
 
-        DB::table('quran_surahs')->insert([
+        DB::table('quran_chapters')->insert([
             'id' => 1, 'revelation_place' => 'makkah', 'revelation_location_id' => $location->id,
-            'revelation_order' => 5, 'name_ar' => 'الفاتحة', 'name_en' => 'Al-Fatihah', 'verses_count' => 7,
+            'revelation_order' => 5, 'name_arabic' => 'الفاتحة', 'name_simple' => 'Al-Fatihah',
+            'name_complex' => 'Al-Fatihah', 'verses_count' => 7, 'first_page' => 1, 'last_page' => 1,
+            'bismillah_pre' => true,
         ]);
 
         $this->delete(route('admin.locations.destroy', $location->id))->assertSessionHas('error');

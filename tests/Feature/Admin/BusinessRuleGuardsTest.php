@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Admin;
 
-use App\Domain\Quran\Models\Surah;
-use App\Domain\Quran\Models\Verse;
-use App\Domain\Quran\Models\VerseTafsir;
-use App\Domain\Quran\Services\TafseerService;
 use App\Domain\Shared\Enums\ScheduleStatus;
 use App\Domain\Shared\Exceptions\BusinessRuleViolationException;
 use App\Domain\Shared\Models\ContentSchedule;
@@ -17,7 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Business-rule guards in SchedulerService and TafseerService.
+ * Business-rule guards in SchedulerService.
  *
  * Both services threw exception classes that do not exist —
  * App\Exceptions\Domain\BusinessLogicException (5 sites) and
@@ -35,76 +31,6 @@ use Tests\TestCase;
 class BusinessRuleGuardsTest extends TestCase
 {
     use RefreshDatabase;
-
-    private function makeTafsir(string $verseKey, string $lang): VerseTafsir
-    {
-        $surah = Surah::create([
-            'revelation_place' => 'makkah',
-            'revelation_order' => 5,
-            'bismillah_pre' => true,
-            'name_ar' => 'سورة الاختبار',
-            'name_en' => 'Test Surah',
-            'transliteration' => 'Test-Surah',
-            'verses_count' => 7,
-        ]);
-
-        $verse = Verse::create([
-            'surah_id' => $surah->id,
-            'verse_number' => 1,
-            'verse_key' => $verseKey,
-            'juz_number' => 1,
-            'hizb_number' => 1,
-            'rub_el_hizb_number' => 1,
-            'ruku_number' => 1,
-            'manzil_number' => 1,
-            'page_number' => 1,
-        ]);
-
-        return VerseTafsir::create([
-            'verse_id' => $verse->id,
-            'resource_id' => null,
-            'verse_key' => $verseKey,
-            'lang' => $lang,
-            'text' => 'نص التفسير',
-            'active' => true,
-        ]);
-    }
-
-    public function test_duplicate_tafseer_raises_a_business_rule_violation(): void
-    {
-        $existing = $this->makeTafsir('1:1', 'ar');
-
-        $this->expectException(BusinessRuleViolationException::class);
-        $this->expectExceptionMessage('Tafseer already exists for verse 1:1 in language ar');
-
-        app(TafseerService::class)->create([
-            'verse_id' => $existing->verse_id,
-            'verse_key' => '1:1',
-            'lang' => 'ar',
-            'text' => 'نص آخر',
-        ]);
-    }
-
-    public function test_duplicate_tafseer_on_update_raises_a_business_rule_violation(): void
-    {
-        $first = $this->makeTafsir('1:1', 'ar');
-
-        $second = VerseTafsir::create([
-            'verse_id' => $first->verse_id,
-            'resource_id' => null,
-            'verse_key' => '1:1',
-            'lang' => 'en',
-            'text' => 'Some tafsir',
-        ]);
-
-        $this->expectException(BusinessRuleViolationException::class);
-
-        // Moving `$second` onto (1:1, ar) collides with `$first`.
-        app(TafseerService::class)->updateTafseer($second, [
-            'verse_key' => '1:1',
-            'lang' => 'ar',
-        ]);
-    }
 
     /**
      * SchedulerService::updateSchedule() looks the schedule up first (raising
@@ -141,9 +67,9 @@ class BusinessRuleGuardsTest extends TestCase
     {
         $files = [
             'app/Domain/Shared/Services/SchedulerService.php',
-            'app/Domain/Quran/Services/TafseerService.php',
             'app/Http/Controllers/Admin/SchedulerController.php',
-            'app/Http/Controllers/Admin/Quran/TafseerController.php',
+            'app/Domain/Quran/Services/ResourceService.php',
+            'app/Http/Controllers/Admin/Quran/ResourceRowController.php',
         ];
 
         foreach ($files as $file) {

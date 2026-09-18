@@ -51,7 +51,7 @@ class Playlist extends Model
 
     public function items(): HasMany
     {
-        return $this->hasMany(PlaylistItem::class, 'playlist_id')->orderBy('surah_id');
+        return $this->hasMany(PlaylistItem::class, 'playlist_id')->orderBy('chapter_id');
     }
 
     /**
@@ -68,14 +68,14 @@ class Playlist extends Model
     }
 
     /**
-     * Distinct people behind the loaded items. Needs items.reciter.profile loaded.
+     * Distinct chapter reciters behind the loaded items. Needs items.reciter loaded.
      *
-     * @return Collection<int, ReciterProfile>
+     * @return Collection<int, QuranResource>
      */
-    public function reciterProfiles(): Collection
+    public function reciters(): Collection
     {
         return $this->items
-            ->map(fn (PlaylistItem $item) => $item->reciter?->profile)
+            ->map(fn (PlaylistItem $item) => $item->reciter)
             ->filter()
             ->unique('id')
             ->values();

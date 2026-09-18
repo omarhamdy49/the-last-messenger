@@ -29,7 +29,7 @@ class LocationUsageRegistryTest extends TestCase
 
         $this->assertContains('seerah_events', $tables);
         $this->assertContains('muslims', $tables);
-        $this->assertContains('quran_surahs', $tables);
+        $this->assertContains('quran_chapters', $tables);
     }
 
     public function test_seerah_events_are_registered_by_location_id_only(): void
@@ -57,20 +57,24 @@ class LocationUsageRegistryTest extends TestCase
         // RefreshDatabase leaves the consumer tables empty, so the fixtures are
         // created here rather than assumed from a seeder.
         foreach ([1, 2, 3] as $n) {
-            DB::table('quran_surahs')->insert([
+            DB::table('quran_chapters')->insert([
                 'id' => $n,
                 'revelation_place' => 'makkah',
                 'revelation_location_id' => $location->id,
                 'revelation_order' => $n,
-                'name_ar' => "سورة {$n}",
-                'name_en' => "Surah {$n}",
+                'name_arabic' => "سورة {$n}",
+                'name_simple' => "Surah {$n}",
+                'name_complex' => "Surah {$n}",
                 'verses_count' => 3,
+                'first_page' => 1,
+                'last_page' => 1,
+                'bismillah_pre' => true,
             ]);
         }
 
         $counts = $this->registry()->countReferences($location->id);
 
-        $this->assertSame(3, $counts['quran_surahs'] ?? 0);
+        $this->assertSame(3, $counts['quran_chapters'] ?? 0);
         $this->assertArrayNotHasKey('muslims', $counts);
         $this->assertTrue($this->registry()->isReferenced($location->id));
     }

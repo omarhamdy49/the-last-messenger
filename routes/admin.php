@@ -13,9 +13,10 @@ use App\Http\Controllers\Admin\ExportController;
 use App\Http\Controllers\Admin\ImportController;
 use App\Http\Controllers\Admin\LanguageSettingsController;
 use App\Http\Controllers\Admin\MediaController;
+use App\Http\Controllers\Admin\MediaSettingsController;
 // use App\Http\Controllers\Admin\MediaCategoryController;
 // use App\Http\Controllers\Admin\MediaProgramController;
-use App\Http\Controllers\Admin\MediaSettingsController;
+use App\Http\Controllers\Admin\RoleController;
 // use App\Http\Controllers\Admin\MediaUploadController;
 // use App\Http\Controllers\Admin\MediaLibraryController;
 // use App\Http\Controllers\Admin\MediaFolderController;
@@ -24,8 +25,8 @@ use App\Http\Controllers\Admin\MediaSettingsController;
 // use App\Http\Controllers\Admin\MediaBulkController;
 // use App\Http\Controllers\Admin\MediaCropController;
 // use App\Http\Controllers\Admin\MediaUsageController;
-use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\SchedulerController;
+use App\Http\Controllers\Admin\Settings\ApiClientController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\VersionController;
@@ -289,6 +290,18 @@ Route::prefix('su/portal/v1/admin')
             Route::get('/user/{userId}', [ActivityLogController::class, 'userActivity'])->name('user');
             Route::get('/model/{type}/{id}', [ActivityLogController::class, 'modelHistory'])->name('model');
             Route::get('/{id}', [ActivityLogController::class, 'show'])->name('show');
+        });
+
+        // Public API clients (006): key + secret, scopes, origins and rate limit per
+        // application. Secrets are shown once, on create and rotate.
+        Route::prefix('settings/api-clients')->name('admin.settings.api-clients.')->middleware('permission:manage api clients,admin')->group(function (): void {
+            Route::get('/', [ApiClientController::class, 'index'])->name('index');
+            Route::post('/', [ApiClientController::class, 'store'])->name('store');
+            Route::get('/{apiClient}/edit', [ApiClientController::class, 'edit'])->whereNumber('apiClient')->name('edit');
+            Route::put('/{apiClient}', [ApiClientController::class, 'update'])->whereNumber('apiClient')->name('update');
+            Route::post('/{apiClient}/rotate', [ApiClientController::class, 'rotate'])->whereNumber('apiClient')->name('rotate');
+            Route::post('/{apiClient}/toggle', [ApiClientController::class, 'toggle'])->whereNumber('apiClient')->name('toggle');
+            Route::delete('/{apiClient}', [ApiClientController::class, 'destroy'])->whereNumber('apiClient')->name('destroy');
         });
 
         // Language Settings Routes

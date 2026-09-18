@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Site;
 
+use App\Domain\Quran\Enums\ResourceKind;
 use App\Domain\Quran\Models\Playlist;
 use App\Domain\Quran\Models\PlaylistItem;
-use App\Domain\Quran\Models\Recitation;
-use App\Domain\Quran\Models\Reciter;
-use App\Domain\Quran\Models\ReciterProfile;
-use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Models\QuranResource;
 use App\Domain\Quran\Repositories\PlaylistRepository;
 use App\Domain\Quran\Services\PlaylistCard;
 use App\Domain\Quran\Services\PlaylistPlayRecorder;
 use App\Domain\Quran\Services\PlaylistService;
 use App\Domain\Quran\Services\QuranCacheKeys;
+use App\Domain\Quran\Services\ReaderService;
+use App\Domain\Quran\Services\ResourceService;
 use App\Domain\Shared\Enums\FavorableType;
 use App\Domain\Shared\Services\FavoriteService;
 use App\Http\Controllers\Controller;
@@ -40,6 +40,8 @@ final class QuranPlaylistController extends Controller
         private readonly PlaylistService $service,
         private readonly FavoriteService $favorites,
         private readonly PlaylistPlayRecorder $plays,
+        private readonly ReaderService $reader,
+        private readonly ResourceService $resources,
     ) {}
 
     public function index(Request $request): View
@@ -53,9 +55,9 @@ final class QuranPlaylistController extends Controller
         $totals = Cache::remember(QuranCacheKeys::playlistScoped('totals'), 600, fn (): array => [
             'public' => Playlist::query()->where('is_public', true)->count(),
             'plays' => (int) Playlist::query()->where('is_public', true)->sum('plays_count'),
-            'reciters' => Reciter::query()
-                ->whereIn('id', PlaylistItem::query()->select('reciter_id')->whereHas('playlist', fn ($q) => $q->where('is_public', true)))
-                ->distinct()->count('profile_id'),
+            'reciters' => PlaylistItem::query()->whereNotNull('resource_id')
+                ->whereHas('playlist', fn ($q) => $q->where('is_public', true))
+                ->distinct()->count('resource_id'),
         ]);
 
         $playlists = $this->repo->gallery($search ?: null, $sort, $request->user()?->id);
@@ -156,11 +158,7 @@ final class QuranPlaylistController extends Controller
      */
     public function audio(Request $request, int $surah, int $recording): JsonResponse|RedirectResponse
     {
-        $url = Recitation::query()->playable()
-            ->where('surah_id', $surah)->where('reciter_id', $recording)
-            ->with('source:id,priority')->get(['id', 'source_id', 'audio_url'])
-            ->sortBy(fn (Recitation $r) => $r->source->priority)
-            ->first()?->audio_url ?? abort(404);
+        $url = $this->service->audioUrl($surah, $recording) ?? abort(404);
 
         return $request->expectsJson()
             ? response()->json(['url' => $url])
@@ -176,25 +174,20 @@ final class QuranPlaylistController extends Controller
     {
         $locale = app()->getLocale();
 
-        $profiles = ReciterProfile::query()->visible()
-            ->with([
-                'translations:id,profile_id,locale,name',
-                'recordings' => fn ($q) => $q->without('sources')->active()->recitationsOnly()
-                    ->with('translations:id,reciter_id,locale,name')->orderBy('display_order')->orderBy('id'),
-            ])
-            ->orderBy('display_order')->orderBy('id')->get()
-            ->map(fn (ReciterProfile $p): array => [
-                'id' => $p->id,
-                'name' => $p->displayName($locale),
-                'image' => $p->profile_image_url,
-                'country' => $p->country,
-                'flag' => country_flag($p->country),
-                'styles' => $p->recordings->pluck('style')->filter()->unique()->map(fn ($s) => __('quran.recordings.'.$s))->values()->all(),
-                'recordings' => $p->recordings->map(fn ($r) => ['id' => $r->id, 'label' => $r->recordingLabel($locale)])->values()->all(),
+        $profiles = $this->resources->active(ResourceKind::CHAPTER_RECITER)
+            ->map(fn (QuranResource $r): array => [
+                'id' => $r->id,
+                'name' => $r->displayName($locale),
+                'image' => PlaylistCard::imageUrl($r->image),
+                'country' => null,
+                'flag' => null,
+                'styles' => array_values(array_filter([$r->style?->label($locale), $r->qirat])),
+                'recordings' => [['id' => $r->id, 'label' => trim(($r->style?->label($locale) ?? '').' '.($r->qirat ?? ''))]],
             ])->values()->all();
 
-        $surahs = Surah::query()->orderBy('id')->get(['id', 'name_ar', 'name_en', 'transliteration', 'verses_count'])
-            ->map(fn (Surah $s): array => ['id' => $s->id, 'name' => $s->getDisplayName($locale), 'verses' => $s->verses_count])->all();
+        $surahs = collect($this->reader->chapterList($locale))
+            ->map(fn (array $c): array => ['id' => $c['number'], 'name' => $locale === 'ar' ? $c['nameAr'] : $c['nameEn'], 'verses' => $c['verses']])
+            ->all();
 
         $initial = $playlist ? [
             'slug' => $playlist->slug,
@@ -202,9 +195,9 @@ final class QuranPlaylistController extends Controller
             'description' => $playlist->description,
             'scope' => $playlist->scope,
             'isPublic' => $playlist->is_public,
-            'profileIds' => $playlist->reciterProfiles()->pluck('id')->all(),
-            'surahIds' => $playlist->items->pluck('surah_id')->all(),
-            'items' => $playlist->items->pluck('reciter_id', 'surah_id')->all(),
+            'profileIds' => $playlist->reciters()->pluck('id')->all(),
+            'surahIds' => $playlist->items->pluck('chapter_id')->all(),
+            'items' => $playlist->items->pluck('resource_id', 'chapter_id')->all(),
         ] : null;
 
         return [

@@ -6,10 +6,10 @@ namespace App\Http\Controllers\Admin\Quran;
 
 use App\Domain\Quran\DTOs\PlaylistData;
 use App\Domain\Quran\Models\Playlist;
-use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Repositories\PlaylistRepository;
 use App\Domain\Quran\Services\PlaylistService;
 use App\Domain\Quran\Services\QuranCacheKeys;
+use App\Domain\Quran\Services\ReaderService;
 use App\Domain\Shared\Services\AdminLoggerService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\Quran\UpdatePlaylistRequest;
@@ -29,6 +29,7 @@ final class PlaylistController extends Controller
     public function __construct(
         private readonly PlaylistRepository $repo,
         private readonly PlaylistService $service,
+        private readonly ReaderService $reader,
         private readonly AdminLoggerService $logger,
     ) {}
 
@@ -51,27 +52,25 @@ final class PlaylistController extends Controller
     {
         $model = Playlist::query()->with([
             'owner:id,name,email',
-            'items.surah:id,name_ar,name_en,transliteration,verses_count',
-            'items.reciter:id,profile_id,style,riwayah,slug',
-            'items.reciter.profile:id',
-            'items.reciter.profile.translations:id,profile_id,locale,name',
+            'items.chapter:id,name_arabic,name_simple,verses_count',
+            'items.chapter.translations:id,chapter_id,locale,name',
         ])->findOrFail($playlist);
 
         $locale = app()->getLocale();
-        $coverage = $this->service->coverage($model->items->pluck('surah_id')->all());
+        $coverage = $this->service->coverage($model->items->pluck('chapter_id')->all());
 
         return view('admin.playlists.edit', [
             'playlist' => $model,
             // Rows the Alpine editor starts with; recordings for a newly added surah are fetched lazily.
             'rows' => $model->items->map(fn ($item) => [
-                'surah' => $item->surah_id,
-                'name' => $item->surah?->getDisplayName($locale) ?? (string) $item->surah_id,
-                'verses' => $item->surah?->verses_count,
-                'recording' => $item->reciter_id,
-                'options' => $coverage[$item->surah_id] ?? [],
+                'surah' => $item->chapter_id,
+                'name' => $item->chapter?->displayName($locale) ?? (string) $item->chapter_id,
+                'verses' => $item->chapter?->verses_count,
+                'recording' => $item->resource_id,
+                'options' => $coverage[$item->chapter_id] ?? [],
             ])->values()->all(),
-            'surahs' => Surah::query()->orderBy('id')->get(['id', 'name_ar', 'name_en', 'verses_count'])
-                ->map(fn (Surah $s) => ['id' => $s->id, 'name' => $s->getDisplayName($locale), 'verses' => $s->verses_count])->all(),
+            'surahs' => collect($this->reader->chapterList($locale))
+                ->map(fn (array $c) => ['id' => $c['number'], 'name' => $locale === 'ar' ? $c['nameAr'] : $c['nameEn'], 'verses' => $c['verses']])->all(),
         ]);
     }
 

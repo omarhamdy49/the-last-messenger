@@ -98,8 +98,8 @@ final class ArtisanCommandsSettingsTest extends TestCase
     {
         $this->actingAs($this->createAdminUser())
             ->postJson('/su/portal/v1/admin/settings/commands/run', [
-                'command' => 'quran:import-tafsir',
-                'arguments' => ['tafsirId' => ''],
+                'command' => 'quran:reciter:fetch',
+                'arguments' => ['resource' => ''],
             ])
             ->assertStatus(422)
             ->assertJsonPath('error.code', 'argument_required');

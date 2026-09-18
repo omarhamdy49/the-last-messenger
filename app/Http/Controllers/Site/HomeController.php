@@ -10,7 +10,7 @@ use App\Domain\Hadith\Models\Hadith;
 use App\Domain\People\DTOs\MuslimListFilters;
 use App\Domain\People\Models\Muslim;
 use App\Domain\People\Services\MuslimDirectoryService;
-use App\Domain\Quran\Services\QuranQueryService;
+use App\Domain\Quran\Services\NavigationService;
 use App\Domain\Seerah\Services\SeerahEventService;
 use App\Http\Controllers\Controller;
 use App\Repositories\ArticleRepository;
@@ -27,7 +27,7 @@ final class HomeController extends Controller
 
     public function __construct(
         private readonly MuslimDirectoryService $muslimDirectory,
-        private readonly QuranQueryService $quranQueryService,
+        private readonly NavigationService $quranNavigation,
         private readonly HomeContentService $homeContentService,
         private readonly SeerahEventService $seerahEventService,
         private readonly ArticleRepository $articleRepository,
@@ -55,29 +55,9 @@ final class HomeController extends Controller
             fn () => $this->articleRepository->getHomeFeaturedArticles($locale, 3),
         );
 
-        // Daily verse — random, cached per day per locale.
-        // Deliberately remember(), not flexible(): the key contains today's date, so at
-        // midnight it is a brand-new key with no stale value to serve. flexible() can only
-        // help when something is already cached, so it would add machinery and change
-        // nothing. Warming this key would be the real fix; out of scope here.
-        $dailyVerse = Cache::remember(
-            "home_daily_verse_{$locale}_".now()->format('Y-m-d'),
-            86400,
-            function () use ($locale): ?array {
-                try {
-                    $dto = $this->quranQueryService->getRandomVerse(
-                        locale: $locale,
-                        withTranslations: true,
-                    );
-
-                    return $dto->toArray();
-                } catch (Throwable $e) {
-                    report($e);
-
-                    return null;
-                }
-            },
-        );
+        // Daily verse — one deterministic pick per day per locale, cached by the
+        // navigation service itself, then mapped to the keys the panel reads.
+        $dailyVerse = $this->dailyVerse($locale);
 
         // Daily hadith — same contract as the verse: one random published row,
         // cached per day per locale. The read side of the Hadith module is not
@@ -166,5 +146,33 @@ final class HomeController extends Controller
             'moduleCards',
             'quickFilters',
         ));
+    }
+
+    /**
+     * The home panel's daily ayah, in the shape `x-site.daily-verse` reads.
+     *
+     * @return array{surah_id: int, surah_name: string, verse_number: int, text_arabic: string, translations: array<string, string>}|null
+     */
+    private function dailyVerse(string $locale): ?array
+    {
+        try {
+            $verse = $this->quranNavigation->verseOfTheDay($locale);
+        } catch (Throwable $e) {
+            report($e);
+
+            return null;
+        }
+
+        if ($verse === null) {
+            return null;
+        }
+
+        return [
+            'surah_id' => $verse['chapter'],
+            'surah_name' => $verse['chapter_name'],
+            'verse_number' => $verse['verse'],
+            'text_arabic' => $verse['text'],
+            'translations' => $verse['translation'] === null ? [] : [$locale => $verse['translation']],
+        ];
     }
 }

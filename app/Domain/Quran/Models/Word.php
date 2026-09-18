@@ -4,106 +4,75 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Models;
 
-use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Builder;
+use App\Domain\Quran\Enums\CharType;
+use Database\Factories\Quran\WordFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Mushaf Word
- *
- * One word — or an ayah-end marker — positioned on a printed-mushaf line/page.
- * Imported from the quran.com layout data; powers line-for-line rendering on the
- * public reader. `text_uthmani` is real Unicode (rendered in the site's own
- * Uthmani font), not a glyph-coded font payload.
+ * A word (or verse-end / pause mark) keyed on the QF word id. Line and page are for
+ * the default mushaf; see MushafWord for other layouts.
  *
  * @property int $id
  * @property int $verse_id
- * @property int $surah_number
- * @property int $verse_number
  * @property int $position
- * @property string $location
- * @property string $text_uthmani
- * @property string $char_type
- * @property int $line_number
+ * @property string $location "chapter:verse:position"
+ * @property CharType $char_type
+ * @property string|null $text_uthmani
+ * @property string|null $text_uthmani_simple
+ * @property string|null $text_indopak
+ * @property string|null $text_imlaei
+ * @property string|null $text_qpc_hafs
+ * @property string|null $code_v1
+ * @property string|null $code_v2
+ * @property int|null $v1_page
+ * @property int|null $v2_page
  * @property int $page_number
- * @property Carbon $created_at
- * @property Carbon $updated_at
+ * @property int $line_number
+ * @property string|null $audio_url
  */
 class Word extends Model
 {
-    /**
-     * The table associated with the model.
-     */
+    /** @use HasFactory<WordFactory> */
+    use HasFactory;
+
     protected $table = 'quran_words';
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<string>
-     */
+    public $incrementing = false;
+
+    protected $keyType = 'int';
+
     protected $fillable = [
-        'verse_id',
-        'surah_number',
-        'verse_number',
-        'position',
-        'location',
-        'text_uthmani',
-        'char_type',
-        'line_number',
-        'page_number',
+        'id', 'verse_id', 'position', 'location', 'char_type',
+        'text_uthmani', 'text_uthmani_simple', 'text_indopak', 'text_imlaei', 'text_qpc_hafs',
+        'code_v1', 'code_v2', 'v1_page', 'v2_page', 'page_number', 'line_number', 'audio_url',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
+        'id' => 'integer',
         'verse_id' => 'integer',
-        'surah_number' => 'integer',
-        'verse_number' => 'integer',
         'position' => 'integer',
-        'line_number' => 'integer',
+        'char_type' => CharType::class,
+        'v1_page' => 'integer',
+        'v2_page' => 'integer',
         'page_number' => 'integer',
+        'line_number' => 'integer',
     ];
 
-    /**
-     * Get the verse this word belongs to.
-     */
+    protected static function newFactory(): WordFactory
+    {
+        return WordFactory::new();
+    }
+
     public function verse(): BelongsTo
     {
         return $this->belongsTo(Verse::class, 'verse_id');
     }
 
-    /**
-     * Whether this token is the ayah-end marker (rendered as our rosette, with
-     * the verse number, rather than as text).
-     */
-    public function isAyahEnd(): bool
+    public function glosses(): HasMany
     {
-        return $this->char_type === 'end';
-    }
-
-    /**
-     * Scope: a single surah's words (denormalised number, no join).
-     *
-     * @param  Builder  $query
-     * @return Builder
-     */
-    public function scopeBySurahNumber($query, int $surahNumber)
-    {
-        return $query->where('surah_number', $surahNumber);
-    }
-
-    /**
-     * Scope: a single mushaf page's words.
-     *
-     * @param  Builder  $query
-     * @return Builder
-     */
-    public function scopeByPage($query, int $page)
-    {
-        return $query->where('page_number', $page);
+        return $this->hasMany(WordGloss::class, 'word_id');
     }
 }

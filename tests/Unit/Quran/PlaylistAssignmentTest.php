@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Quran;
 
-use App\Domain\Quran\Models\Recitation;
-use App\Domain\Quran\Models\Reciter;
-use App\Domain\Quran\Models\ReciterProfile;
-use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Models\Chapter;
+use App\Domain\Quran\Models\ChapterAudioFile;
+use App\Domain\Quran\Models\QuranResource;
+use App\Domain\Quran\Repositories\AudioRepositoryInterface;
+use App\Domain\Quran\Repositories\ResourceRepositoryInterface;
 use App\Domain\Quran\Services\PlaylistService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -22,45 +23,42 @@ final class PlaylistAssignmentTest extends TestCase
 {
     use RefreshDatabase;
 
-    /** @return list<int> surah ids 1..n */
+    /** @return list<int> chapter numbers 1..n */
     private function surahs(int $n): array
     {
         $ids = [];
         for ($i = 1; $i <= $n; $i++) {
-            $ids[] = Surah::query()->forceCreate([
-                'id' => $i, 'revelation_place' => 'makkah', 'revelation_order' => $i, 'bismillah_pre' => true,
-                'name_ar' => 'س'.$i, 'name_en' => 'S'.$i, 'transliteration' => 'S'.$i, 'verses_count' => 3,
-            ])->id;
+            $ids[] = Chapter::factory()->number($i)->create(['name_arabic' => 'س'.$i, 'name_simple' => 'S'.$i, 'verses_count' => 3])->id;
         }
 
         return $ids;
     }
 
     /**
-     * One person with one active recording covering the given surahs.
+     * One chapter reciter with a file for each covered chapter. In 006 the "person" and
+     * the "recording" are the same resource.
      *
      * @param  list<int>  $covers
-     * @return array{0: int, 1: int} [profile id, recording id]
+     * @return array{0: int, 1: int} [reciter id, reciter id]
      */
     private function person(string $slug, array $covers, bool $default = true): array
     {
-        $profile = ReciterProfile::query()->create(['identity_key' => 'test:'.$slug, 'slug' => $slug, 'is_active' => true]);
-        $profile->translations()->create(['locale' => 'ar', 'name' => $slug]);
-        $recording = Reciter::query()->create(['slug' => $slug.'-rec', 'profile_id' => $profile->id, 'kind' => 'recitation', 'is_active' => true, 'display_order' => 1]);
-        $recording->translations()->create(['locale' => 'ar', 'name' => $slug, 'is_ready' => true]);
-        foreach ($covers as $surah) {
-            Recitation::query()->create(['reciter_id' => $recording->id, 'surah_id' => $surah, 'audio_url' => "https://cdn.test/{$slug}/{$surah}.mp3", 'format' => 'mp3']);
-        }
-        if ($default) {
-            $profile->update(['default_recording_id' => $recording->id]);
+        $reciter = QuranResource::factory()->chapterReciter()->create(['slug' => $slug, 'name' => $slug, 'is_active' => true, 'display_order' => 1]);
+        $reciter->syncTranslations(['name' => ['ar' => 'قارئ '.$slug]]);
+        foreach ($covers as $chapter) {
+            ChapterAudioFile::factory()->create(['resource_id' => $reciter->id, 'chapter_id' => $chapter, 'url' => "https://cdn.test/{$slug}/{$chapter}.mp3", 'duration_ms' => 90000]);
         }
 
-        return [$profile->id, $recording->id];
+        return [$reciter->id, $reciter->id];
     }
 
     private function service(int $seed = 7): PlaylistService
     {
-        return new PlaylistService(new Randomizer(new Mt19937($seed)));
+        return new PlaylistService(
+            app(AudioRepositoryInterface::class),
+            app(ResourceRepositoryInterface::class),
+            new Randomizer(new Mt19937($seed)),
+        );
     }
 
     public function test_assignment_is_balanced_across_full_coverage(): void
@@ -128,11 +126,11 @@ final class PlaylistAssignmentTest extends TestCase
         );
     }
 
-    public function test_inactive_source_does_not_count_as_coverage(): void
+    public function test_inactive_reciter_does_not_count_as_coverage(): void
     {
         $surahs = $this->surahs(1);
         [$a, $recA] = $this->person('a', $surahs);
-        DB::table('quran_recording_sources')->where('recording_id', $recA)->update(['is_active' => false]);
+        DB::table('quran_resources')->where('id', $recA)->update(['is_active' => false]);
 
         $result = $this->service()->assign([$a], $surahs);
 

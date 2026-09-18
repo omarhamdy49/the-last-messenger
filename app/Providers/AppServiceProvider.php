@@ -10,18 +10,20 @@ use App\Domain\Hadith\Services\HadithDashboardStatsProvider;
 use App\Domain\Media\Services\MediaDashboardStatsProvider;
 use App\Domain\Media\Services\MediaProgramExportAdapter;
 use App\Domain\People\Services\PeopleDashboardStatsProvider;
+use App\Domain\Quran\Repositories\QuranExportRepositoryInterface;
 use App\Domain\Quran\Services\QuranDashboardStatsProvider;
-use App\Domain\Quran\Services\QuranReciterExportAdapter;
-use App\Domain\Quran\Services\QuranSurahExportAdapter;
-use App\Domain\Quran\Services\QuranTafseerExportAdapter;
-use App\Domain\Quran\Services\QuranVerseExportAdapter;
+use App\Domain\Quran\Services\QuranExportAdapter;
 use App\Domain\Seerah\Services\SeerahDashboardStatsProvider;
 use App\Domain\Seerah\Services\SeerahEventExportAdapter;
+use App\Domain\Shared\Contracts\ApiClientAuthenticator;
 use App\Domain\Shared\Models\Language;
 use App\Domain\Shared\Services\DashboardAnalyticsService;
 use App\Domain\Shared\Services\DashboardService;
 use App\Domain\Shared\Services\ExportGateway;
+use App\Domain\Shared\ValueObjects\ApiClientIdentity;
+use App\Http\Middleware\AuthenticateApiClient;
 use App\Observers\LanguageObserver;
+use App\Services\ApiClientService;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -37,28 +39,30 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $statsProviders = [
+        $this->app->bind(ApiClientAuthenticator::class, ApiClientService::class);
+
+        // Built lazily, per resolve: the Quran provider takes repositories, and
+        // resolving those here in register() would instantiate them before every
+        // module's bindings exist.
+        $statsProviders = static fn ($app): array => [
             new BlogDashboardStatsProvider,
             new HadithDashboardStatsProvider,
             new PeopleDashboardStatsProvider,
-            new QuranDashboardStatsProvider,
+            $app->make(QuranDashboardStatsProvider::class),
             new SeerahDashboardStatsProvider,
             new MediaDashboardStatsProvider,
         ];
 
-        $this->app->singleton(DashboardService::class, fn (): DashboardService => new DashboardService(statsProviders: $statsProviders)
+        $this->app->singleton(DashboardService::class, fn ($app): DashboardService => new DashboardService(statsProviders: $statsProviders($app))
         );
 
-        $this->app->singleton(DashboardAnalyticsService::class, fn (): DashboardAnalyticsService => new DashboardAnalyticsService(statsProviders: $statsProviders)
+        $this->app->singleton(DashboardAnalyticsService::class, fn ($app): DashboardAnalyticsService => new DashboardAnalyticsService(statsProviders: $statsProviders($app))
         );
 
         $this->app->singleton(ExportGateway::class, function ($app): ExportGateway {
             return new ExportGateway(modules: [
                 $app->make(ArticleExportAdapter::class),
-                $app->make(QuranSurahExportAdapter::class),
-                $app->make(QuranVerseExportAdapter::class),
-                $app->make(QuranReciterExportAdapter::class),
-                $app->make(QuranTafseerExportAdapter::class),
+                ...QuranExportAdapter::all($app->make(QuranExportRepositoryInterface::class)),
                 $app->make(SeerahEventExportAdapter::class),
                 $app->make(MediaProgramExportAdapter::class),
             ]);
@@ -110,6 +114,24 @@ class AppServiceProvider extends ServiceProvider
 
         RateLimiter::for('api', static function (Request $request): Limit {
             return Limit::perMinute(60)->by('api:'.($request->user()?->id ?? $request->ip()));
+        });
+
+        // api_client: the per-application budget set on the API client (006). Runs
+        // after api.client, so the client is always resolved; the IP fallback only
+        // applies if a route is ever mounted without it.
+        RateLimiter::for('api_client', static function (Request $request): Limit {
+            $client = $request->attributes->get(AuthenticateApiClient::ATTRIBUTE);
+
+            return $client instanceof ApiClientIdentity
+                ? Limit::perMinute(max(1, $client->rateLimitPerMinute))->by('api-client:'.$client->id)
+                : Limit::perMinute(20)->by('api-client-anon:'.$request->ip());
+        });
+
+        // api_mutations: writes through the public API, per client.
+        RateLimiter::for('api_mutations', static function (Request $request): Limit {
+            $client = $request->attributes->get(AuthenticateApiClient::ATTRIBUTE);
+
+            return Limit::perMinute(30)->by('api-mutations:'.($client instanceof ApiClientIdentity ? 'client-'.$client->id : $request->ip()));
         });
 
         // ai_inquiry: 5 requests/minute per authenticated user — burst protection

@@ -25,7 +25,8 @@ final class PreviewPlaylistRequest extends FormRequest
     {
         return [
             'profile_ids' => ['required', 'array', 'min:1', 'max:30'],
-            'profile_ids.*' => ['integer', Rule::exists('quran_reciter_profiles', 'id')->where('is_active', true)],
+            // A "profile" is an active chapter-reciter resource (006).
+            'profile_ids.*' => ['integer', Rule::exists('quran_resources', 'id')->where('kind', 'chapter_reciter')->where('is_active', true)],
             'scope' => ['required', Rule::in(['full', 'custom'])],
             'surah_ids' => ['required_if:scope,custom', 'array', 'max:114'],
             'surah_ids.*' => ['integer', 'between:1,114'],

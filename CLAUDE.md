@@ -365,34 +365,89 @@ re-import hides its collection (`is_published = false`) while the hadith rows st
 published, so a bare `where('is_published', true)` will serve hidden content.
 
 ### 6. Quran Module
-**Status:** ✅ Implemented (Domain-Driven Design with CQRS)
+**Status:** ✅ Rebuilt on the Quran Foundation (QF) Content API v4 by `006-quran-qf-refactor`
+(see `specs/006-quran-qf-refactor/`). **There is no CQRS layer** — `app/Domain/Quran/Application/`
+was deleted; reads and writes both go controller → service → repository interface.
 
-**Features:**
-- CQRS layer in `app/Domain/Quran/Application/` (Commands, Queries, Handlers, DTOs).
-  Note it is consumed only by `Site\QuranController` / `Site\HomeController`; the
-  admin controllers still go through `QuranService` / `VerseService` directly, so
-  several reads exist in two places. Prefer the query stack for new read paths.
-- Surahs, Verses, Tafseer, Translations, Reciters, Recitations, Revelation contexts
-- `Enums/RevelationPlace` is the single source of truth for `makkah|madinah`; use
-  `RevelationPlace::fromExternal()` when importing (datasets say Meccan/Medina/…)
-- Verse identity is `verse_key` in `"surah:verse"` form (e.g. `"2:255"`)
-- **Reciter playlists** (visitor-built, shareable): `quran_playlists` / `quran_playlist_items`,
-  `Models/{Playlist,PlaylistItem}`, `PlaylistRepository`, `PlaylistService::assign()`
-  (balanced-random surah → recording; `Recitation::playable()` is the "has audio" rule).
-  Site routes `public.quran.playlists.*` (`/quran/playlists`, slug = 12-char random),
-  admin `admin.playlists.*`. `Playlist::scopeVisibleTo()` is the only visibility rule —
-  private playlists 404. Reader accepts `?reciter=<recording id>` (player `configure({force})`).
-  Reciter people are bookmarkable via `FavorableType::RECITER`. Spec: `specs/004-quran-playlists/`.
+**The rule that decides everything here:** all content is imported into our own tables and
+every page and API reads only from them. Nothing calls QF at request time. Only audio files
+stream from their remote URLs, unless an admin uploads or downloads them.
+
+**Tables (18):** `quran_chapters` (+`_translations`), `quran_sections` (juz/hizb/rubʿ/manzil/rukūʿ
+in one table keyed by `(type, number)`), `quran_verses`, `quran_words`, `quran_word_glosses`,
+`quran_languages`, `quran_resources` (+`_translations`), `quran_translations`, `quran_tafsirs`,
+`quran_chapter_infos`, `quran_mushafs`, `quran_mushaf_pages`, `quran_mushaf_words`,
+`quran_audio_files`, `quran_chapter_audio_files`, `quran_chapter_audio_timestamps`,
+`quran_sync_states`, `quran_sync_runs`, plus the kept `quran_playlists` / `quran_playlist_items`
+and the untouched `ai_inquiries` / `ai_inquiry_usages`.
+
+**Shape to know before touching it:**
+- **Corpus ids are QF ids.** `quran_chapters.id` is the mushaf number 1–114, `quran_verses.id`
+  is the QF verse id 1–6236, `quran_words.id` is the QF word id — none of them auto-increment,
+  so anything that inserts a corpus row must supply the id. Verse identity in URLs and APIs
+  stays `verse_key` (`"2:255"`).
+- **One catalogue table for every kind of resource.** `quran_resources.kind` (`ResourceKind`)
+  is translation, tafsir, chapter_info, verse_media, recitation, chapter_reciter,
+  word_translation or word_transliteration. A reciter is a resource, not its own model: there
+  is no `Reciter`, `ReciterProfile`, `RecordingSource` or `Recitation` any more. `qf_id` is
+  unique per kind; `source` is `qf|manual`; `external_source` + `external_ref_id` are what the
+  manual fetch uses.
+- **Translations of content vs translations of names.** Verse text in another language is a
+  row in `quran_translations` keyed by `resource_id` — there is no `lang` column and no
+  `quran_verse_translations` table. A resource's own displayed *name* uses the normal
+  `HasLocalizedContent` pattern in `quran_resource_translations`.
+- **Scripts are columns, not rows.** `Enums/Script` maps each of the 11 QF scripts to its
+  `quran_verses` column (`text_uthmani`, `text_indopak`, `code_v2`, …). Tajweed markup is
+  sanitised by `Verse::sanitizeTajweed()`, which keeps only `<tajweed class>` / `<span class>`.
+- `Enums/RevelationPlace` stays the single source of truth for `makkah|madinah`
+  (`fromExternal()` when importing, since datasets say Meccan/Medina/…).
+- **Audio has two id spaces that never mix:** ayah-by-ayah recitations (`quran_audio_files`,
+  one row per verse) and whole-chapter reciters (`quran_chapter_audio_files` +
+  `quran_chapter_audio_timestamps`). Relative QF URLs are absolutised by `AudioService`.
+  **The public reader plays only whole-chapter recordings**: "play from here" is a seek
+  inside the one file, located by `quran_chapter_audio_timestamps` (estimated from letter
+  counts when a recording has none). Ayah recitations are still imported, administered and
+  served by the API, but `ReaderService::readerReciters()` does not offer them and the
+  player has no per-verse queue — don't add one back.
+- **Visibility:** a verse is public when its chapter is (`Chapter::published()`), which is what
+  `QuranPublicVisibility` enforces for topics and bookmarks.
+- **Removed, do not reintroduce:** Asbab al-Nuzul / revelation contexts, reciter profiles and
+  aliases, recording sources, the everyayah / quran.com / Wikidata importers, the generic CSV
+  importers for surahs, verses, reciters and tafseer, and the `/quran/live` page (live channels
+  belong to Media; `/quran/live` 301s to `/media/live`).
+
+**Import and sync (QF production, OAuth2 client credentials):**
+- `quran:qf:doctor` first — it prints token and capability status and never prints secrets.
+- `quran:qf:bootstrap` runs the whole sequence; the individual steps are
+  `quran:qf:import-structure`, `import-verses`, `import-words`, `import-catalogue`,
+  `import-chapter-infos`, `import-timestamps`, `download-assets`.
+- `quran:qf:sync` applies the QF mutation feed for every resource with `sync_enabled`, keyed by
+  a canonical filter with its own `sync_token`. Editor-locked rows (`is_locked`) are skipped and
+  itemised in the run report.
+- `quran:reciter:fetch {resource}` fetches one reciter's data, files or timestamps from its
+  `external_source` (QF or mp3quran). The admin reciter page queues the same job.
+- `quran:reciter:images --download` fills reciter portraits and missing Arabic names from
+  quran.com's public reciter list (QF ships neither), matching on the consonant skeleton of
+  the name. It never replaces an image or translation that is already set unless `--force`.
+- Every step is idempotent, chunked and count-gated. Commands are whitelisted in
+  `config/artisan-commands.php` under the `quran` group. See `docs/QURAN-QF-SYNC.md`.
+
+**Admin:** `routes/admin/quran.php`, names `admin.quran.*`, permissions `view quran`,
+`edit quran` and `sync quran` (anything that calls QF or queues an import needs the last one).
+Screens: chapters, verses (+ words and locking), sections, mushafs, languages, resources per
+kind, resource rows, ayah audio, chapter audio and timestamps, the sync dashboard, playlists
+and AI inquiries.
+
+**Public API:** `/api/v1/quran/*` in QF v4 shapes, served from our tables, behind the same
+trust boundary as every other module (API key + secret via `api.client`, then Sanctum, then
+`api.scope:quran`). `QuranApiService` shapes every payload; there are no Quran API Resource
+classes.
 
 **Key Files:**
-- `app/Domain/Quran/` — full domain structure
-- `app/Http/Controllers/Admin/Quran/{SurahController,VerseController,TafseerController,ReciterController,RecitationController,RevelationContextController,AiInquiryController}.php`
-- `app/Http/Resources/SurahResource.php`, `VerseResource.php`, `TafseerResource.php`
-
-> Verse CRUD lives at `admin.verses.*`. The old `admin.quran.*` verse routes and
-> their controller were **removed**: the controller was wired to the Surah
-> repository, so "delete verse" deleted the Surah with that id and cascaded to all
-> of its verses.
+- `app/Domain/Quran/` — Enums, DTOs, Models, Repositories, Services, `Import/QuranFoundation/`
+- `app/Http/Controllers/Admin/Quran/`, `app/Http/Controllers/Site/Quran/`,
+  `app/Http/Controllers/Api/Quran/QuranApiController.php`
+- `resources/views/admin/quran/`, `resources/views/public/quran/`
 
 ### 7. Seerah Module
 **Status:** ✅ Implemented — schema rebuilt by `005-seerah-schema-refactor` (see `specs/005-seerah-schema-refactor/`)
@@ -741,9 +796,18 @@ by default; only registration, login, and health are anonymous.
 
 **Base URL:** `/api/v1/`
 
-**Authentication:** Laravel Sanctum bearer tokens with the `api:access` ability.
-Send `Authorization: Bearer <token>` on every route except
-`POST /auth/register`, `POST /auth/login`, and `GET /health`.
+**Authentication (two layers, both required).** Every route except `GET /health`
+first identifies the calling *app* with `X-Api-Key` and `X-Api-Secret`, checked by
+the `api.client` middleware against `api_clients` (per-client rate limit, allowed
+origins, scopes). Routes that act for a *user* then also need a Laravel Sanctum
+bearer token with the `api:access` ability: `Authorization: Bearer <token>` on
+everything except `POST /auth/register`, `POST /auth/login` and `GET /health`.
+Module routes add a scope check, e.g. `api.scope:quran`.
+
+Missing or wrong credentials are a 401 with `type: invalid_api_credentials`; a
+wrong scope or a disallowed origin is a 403; the per-client limit returns 429 with
+`Retry-After`. Manage clients under Settings → API clients or with
+`api:client:create`, which prints the key and secret once.
 
 **Response Format:**
 ```json
@@ -965,7 +1029,7 @@ public function test_converts_gregorian_to_hijri()
 - ✅ Categories & tags
 - ✅ User authentication & roles (admin guard separate from the public `web` guard)
 - 🟡 Hadith module (models + Sunnah.com import pipeline; no admin or public UI yet)
-- ✅ Quran module (CQRS read stack, full admin CRUD)
+- ✅ Quran module (QF import + sync, full admin CRUD, QF-shaped public API)
 - ✅ Seerah module (events, timeline, admin CRUD)
 - ✅ People module (companions + genealogy, admin CRUD)
 - ✅ Media programs module (programs, episodes, live channels, YouTube sync)
@@ -1052,6 +1116,7 @@ ray($variable);
 - `FORM-BUILDER-GUIDE.md` — Form builder patterns
 - `DATATABLE-API-DOCUMENTATION.md` — DataTable implementation
 - `ARABIC_RTL_CONFIGURATION_SUMMARY.md` — RTL support guide
+- `QURAN-QF-SYNC.md` — Quran Foundation import, sync and reciter fetch runbook
 
 ### External Documentation
 - Laravel 13 Docs: https://laravel.com/docs/13.x

@@ -1,0 +1,37 @@
+{
+ "chapter_infos": [
+  {
+   "id": 155,
+   "name": "Hamza Roberto Piccardo",
+   "author_name": "Hamza Roberto Piccardo",
+   "slug": "hamza-roberto-piccardo-info",
+   "language_name": "italian",
+   "translated_name": {
+    "name": "Hamza Roberto Piccardo",
+    "language_name": "english"
+   }
+  },
+  {
+   "id": 61,
+   "name": "A. Maududi",
+   "author_name": "Sayyid Abul Ala Maududi",
+   "slug": "",
+   "language_name": "urdu",
+   "translated_name": {
+    "name": "A. Maududi",
+    "language_name": "english"
+   }
+  },
+  {
+   "id": 1028,
+   "name": "Ibn Ashur",
+   "author_name": "Muhammad al-Tahir ibn Ashur",
+   "slug": "",
+   "language_name": "Arabic",
+   "translated_name": {
+    "name": "Ibn Ashur",
+    "language_name": "english"
+   }
+  }
+ ]
+}

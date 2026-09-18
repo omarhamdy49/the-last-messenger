@@ -1,0 +1,59 @@
+{
+ "tafsirs": [
+  {
+   "id": 169,
+   "name": "Ibn Kathir (Abridged)",
+   "author_name": "Hafiz Ibn Kathir",
+   "slug": "en-tafisr-ibn-kathir",
+   "language_name": "english",
+   "translated_name": {
+    "name": "Ibn Kathir (Abridged)",
+    "language_name": "english"
+   }
+  },
+  {
+   "id": 14,
+   "name": "Tafsir Ibn Kathir",
+   "author_name": "Hafiz Ibn Kathir",
+   "slug": "ar-tafsir-ibn-kathir",
+   "language_name": "arabic",
+   "translated_name": {
+    "name": "Tafsir Ibn Kathir",
+    "language_name": "english"
+   }
+  },
+  {
+   "id": 16,
+   "name": "Tafsir Muyassar",
+   "author_name": "المیسر",
+   "slug": "ar-tafsir-muyassar",
+   "language_name": "arabic",
+   "translated_name": {
+    "name": "Tafsir Muyassar",
+    "language_name": "english"
+   }
+  },
+  {
+   "id": 91,
+   "name": "السعدي Al-Sa'di",
+   "author_name": "Saddi",
+   "slug": "ar-tafseer-al-saddi",
+   "language_name": "arabic",
+   "translated_name": {
+    "name": "السعدي Al-Sa'di",
+    "language_name": "english"
+   }
+  },
+  {
+   "id": 160,
+   "name": "Tafsir Ibn Kathir",
+   "author_name": "Hafiz Ibn Kathir",
+   "slug": "tafseer-ibn-e-kaseer-urdu",
+   "language_name": "urdu",
+   "translated_name": {
+    "name": "Tafsir Ibn Kathir",
+    "language_name": "english"
+   }
+  }
+ ]
+}

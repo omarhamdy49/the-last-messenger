@@ -57,3 +57,7 @@ logs/security/
 .ds-sync/
 ds-bundle/
 ds-bundle-*/
+
+# Quran mushaf fonts (142 MB, 1,210 files): downloaded assets, not source.
+# Re-fetch with `php artisan quran:qf:download-assets --fonts=v1,v2,hafs,indopak`.
+/public/fonts/quran

@@ -7,7 +7,8 @@ namespace Tests\Feature\E2E;
 use App\Domain\Blog\Models\Category;
 use App\Domain\Blog\Models\Series;
 use App\Domain\Blog\Models\Tag;
-use App\Domain\Quran\Models\Reciter;
+use App\Domain\Quran\Enums\ResourceKind;
+use App\Domain\Quran\Models\QuranResource;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Models\SeerahEventType;
 use App\Domain\Shared\Models\Language;
@@ -167,28 +168,24 @@ class TranslationMigrationE2ETest extends TestCase
     }
 
     /**
-     * Test 11: Quran Module - Reciter with Translations
-     * Verify Reciter model migrated correctly
+     * Test 11: Quran Module - reciter resource with translations
      */
     public function test_reciter_translations(): void
     {
-        $reciter = Reciter::create([
+        $reciter = QuranResource::create([
+            'kind' => ResourceKind::CHAPTER_RECITER,
             'slug' => 'famous-qari',
-            'style' => 'tajweed',
-            'is_featured' => true,
+            'name' => 'Famous Qari',
             'is_active' => true,
             'display_order' => 1,
         ]);
 
-        // Verify translation table exists
-        $this->assertTrue(\Schema::hasTable('reciter_translations'));
-
-        // Verify translatable fields
-        $this->assertCount(2, $reciter->getTranslatableFields());
+        $this->assertTrue(\Schema::hasTable('quran_resource_translations'));
         $this->assertContains('name', $reciter->getTranslatableFields());
         $this->assertContains('description', $reciter->getTranslatableFields());
 
-        $this->assertTrue(true);
+        $reciter->syncTranslations(['name' => ['ar' => 'القارئ']]);
+        $this->assertSame('القارئ', $reciter->fresh()->getTranslation('name', 'ar'));
     }
 
     /**
@@ -258,7 +255,7 @@ class TranslationMigrationE2ETest extends TestCase
             Category::class,
             Tag::class,
             SeerahEvent::class,
-            Reciter::class,
+            QuranResource::class,
             Language::class,
             // Article uses Spatie HasTranslations (JSON columns), not HasLocalizedContent per-table approach
         ];
@@ -313,7 +310,7 @@ class TranslationMigrationE2ETest extends TestCase
             'series_translations',
             'categories_translations',
             'tags_translations',
-            'reciter_translations',
+            'quran_resource_translations',
             'seerah_event_translations',
         ];
 
@@ -362,7 +359,7 @@ class TranslationMigrationE2ETest extends TestCase
             'series_translations',
             'category_translations',    // singular — canonical name
             'tag_translations',          // singular — canonical name
-            'reciter_translations',
+            'quran_resource_translations',
             'seerah_event_translations',
             'language_translations',
             // Article uses Spatie JSON columns (no separate article_translations table)

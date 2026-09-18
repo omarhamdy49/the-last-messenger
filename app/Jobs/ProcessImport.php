@@ -5,10 +5,6 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Domain\Blog\Importers\ArticleImporter;
-use App\Domain\Quran\Importers\QuranSurahImporter;
-use App\Domain\Quran\Importers\QuranVerseImporter;
-use App\Domain\Quran\Importers\ReciterImporter;
-use App\Domain\Quran\Importers\TafseerImporter;
 use App\Domain\Seerah\Importers\SeerahEventImporter;
 use App\Domain\Shared\Models\Import;
 use App\Domain\Shared\Services\AdminLoggerService;
@@ -125,10 +121,6 @@ class ProcessImport implements ShouldQueue
         return match ($this->import->module) {
             'articles' => new ArticleImporter($this->import),
             'seerah_events' => new SeerahEventImporter($this->import),
-            'quran_surahs' => new QuranSurahImporter($this->import),
-            'quran_verses' => new QuranVerseImporter($this->import),
-            'reciters' => new ReciterImporter($this->import),
-            'tafseer' => new TafseerImporter($this->import),
             default => null,
         };
     }

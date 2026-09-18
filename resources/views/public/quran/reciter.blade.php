@@ -79,7 +79,7 @@
                         @endif
                         @if ($reciter['style'])
                             <span class="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white text-sm font-semibold px-4 py-1.5 rounded-full">
-                                <i data-lucide="mic" class="w-4 h-4" aria-hidden="true"></i>{{ $reciter['style'] }}
+                                <i data-lucide="mic" class="w-4 h-4" aria-hidden="true"></i>{{ $reciter['styleLabel'] ?? $reciter['style'] }}
                             </span>
                         @endif
                         @if ($reciter['riwayah'])
@@ -99,14 +99,15 @@
 
     <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
-        {{-- About --}}
-        @if (filled($reciter['description']))
+        {{-- About (localized description, else the source's info text) --}}
+        @php $about = filled($reciter['description']) ? $reciter['description'] : \App\Domain\Quran\Services\ReaderService::plain($reciter['info'] ?? null); @endphp
+        @if (filled($about))
             <section class="mb-10">
                 <h2 class="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-3">
                     <span class="w-1 h-7 rounded-full bg-gradient-to-b from-[#0056b3] to-[#218838]"></span>
                     {{ __('quran.public.reciter_about') }}
                 </h2>
-                <p class="text-gray-700 dark:text-gray-300 leading-relaxed max-w-3xl">{{ $reciter['description'] }}</p>
+                <p class="text-gray-700 dark:text-gray-300 leading-relaxed max-w-3xl whitespace-pre-line" dir="auto">{{ $about }}</p>
             </section>
         @endif
 
@@ -143,6 +144,14 @@
                         tracks: @js($tracks),
                         isCurrent(url) { return $store.audioPlayer.track?.url === url },
                         isPlaying(url) { return this.isCurrent(url) && $store.audioPlayer.playing },
+                        copied: null,
+                        // Share the reading page with this reciter preselected, not the
+                        // mp3 — the page plays the same file and outlives a moved file.
+                        copyLink(number, url) {
+                            navigator.clipboard?.writeText(url);
+                            this.copied = number;
+                            setTimeout(() => { if (this.copied === number) this.copied = null }, 1600);
+                        },
                      }">
                     @foreach ($playable as $i => $recitation)
                         <button type="button"
@@ -154,7 +163,40 @@
                             <span class="w-9 h-9 shrink-0 rounded-xl bg-gradient-to-br from-[#0056b3] to-[#218838] text-white text-xs font-bold flex items-center justify-center tabular-nums">
                                 {{ $recitation['surah_number'] }}
                             </span>
-                            <span class="flex-1 min-w-0 font-bold text-sm text-gray-900 dark:text-white truncate">{{ $recitation['surah_name'] }}</span>
+                            <span class="flex-1 min-w-0">
+                                <span class="block font-bold text-sm text-gray-900 dark:text-white truncate">{{ $recitation['surah_name'] }}</span>
+                                @if (! empty($recitation['has_timestamps']))
+                                    <span class="text-[11px] text-[#218838]" title="{{ __('quran.public.follow_along_available') }}">{{ __('quran.public.follow_along') }}</span>
+                                @endif
+                            </span>
+                            @php($surahLink = route('public.quran.surah', ['surahNumber' => $recitation['surah_number'], 'reciter' => $reciter['id']]))
+                            <span class="shrink-0 flex items-center gap-1.5">
+                                <a href="{{ $surahLink }}" @click.stop
+                                   class="text-gray-400 hover:text-[#0056b3]" title="{{ __('quran.public.read_with_reciter') }}" aria-label="{{ __('quran.public.read_with_reciter') }}">
+                                    <i data-lucide="book-open" class="w-4 h-4"></i>
+                                </a>
+
+                                {{-- Download. The file is on the reciter's own host, so the
+                                     browser decides between saving and opening it. --}}
+                                <a href="{{ $recitation['audio_url'] }}" download @click.stop
+                                   class="text-gray-400 hover:text-[#0056b3]" title="{{ __('quran.public.download_surah') }}"
+                                   aria-label="{{ __('quran.public.download_surah').' — '.$recitation['surah_name'] }}">
+                                    <i data-lucide="download" class="w-4 h-4"></i>
+                                </a>
+
+                                {{-- A nested <button> inside the row button is invalid, so the
+                                     copy control is a span that behaves like one. --}}
+                                <span role="button" tabindex="0"
+                                      @click.stop="copyLink({{ $recitation['surah_number'] }}, @js($surahLink))"
+                                      @keydown.enter.stop.prevent="copyLink({{ $recitation['surah_number'] }}, @js($surahLink))"
+                                      class="cursor-pointer text-gray-400 hover:text-[#0056b3]"
+                                      :class="copied === {{ $recitation['surah_number'] }} ? 'text-[#218838]' : ''"
+                                      :title="copied === {{ $recitation['surah_number'] }} ? @js(__('quran.public.link_copied')) : @js(__('quran.public.copy_surah_link'))"
+                                      :aria-label="copied === {{ $recitation['surah_number'] }} ? @js(__('quran.public.link_copied')) : @js(__('quran.public.copy_surah_link'))">
+                                    <i data-lucide="link" class="w-4 h-4" x-show="copied !== {{ $recitation['surah_number'] }}"></i>
+                                    <i data-lucide="check" class="w-4 h-4" x-show="copied === {{ $recitation['surah_number'] }}" x-cloak></i>
+                                </span>
+                            </span>
 
                             {{-- Play / pause / equalizer state --}}
                             <span class="w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all duration-300 text-[#0056b3] dark:text-[#64CCC5] bg-[#0056b3]/10 dark:bg-white/10 group-hover:bg-gradient-to-r group-hover:from-[#0056b3] group-hover:to-[#218838] group-hover:text-white">

@@ -67,7 +67,7 @@ return [
     'usage' => [
         'seerah_events' => ':count olay',
         'muslims' => ':count kişi',
-        'quran_surahs' => ':count sure',
+        'quran_chapters' => ':count sure',
     ],
     'types' => [
         'city' => 'Şehir',

@@ -53,7 +53,7 @@ enum SearchModule: string
             self::MEDIA => ['translations.title', 'translations.description'],
             self::SEERAH => ['translations.title', 'translations.description'],
             self::SAHABA => ['name_ar', 'name_en'],
-            self::QURAN => ['translations.text', 'translations.text_notashkeel'],
+            self::QURAN => ['translations.text', 'text_uthmani_simple', 'text_imlaei_simple'],
             self::ALL => [],
         };
     }
@@ -72,7 +72,8 @@ enum SearchModule: string
      *   article_locale            ft_search                        (title, excerpt)
      *   media_program_translations fulltext_program_title_desc      (title, description)
      *   seerah_event_translations fulltext_title_description        (title, description)
-     *   quran_verse_translations  …_text_text_notashkeel_fulltext   (text, text_notashkeel)
+     *   quran_translations        qt_text_ft                       (text)
+     *   quran_verses              qv_text_ft                       (text_uthmani_simple, text_imlaei_simple)
      *   muslims                   ft_muslims_search_name_ar        (search_name_ar)
      *   muslims                   ft_muslims_search_name_en        (search_name_en)
      *
@@ -98,7 +99,8 @@ enum SearchModule: string
                 ['relation' => 'translations', 'columns' => ['title', 'description']],
             ],
             self::QURAN => [
-                ['relation' => 'translations', 'columns' => ['text', 'text_notashkeel']],
+                ['relation' => 'translations', 'columns' => ['text']],
+                ['relation' => null, 'columns' => ['text_uthmani_simple', 'text_imlaei_simple']],
             ],
             self::SAHABA => [
                 ['relation' => null, 'columns' => ['search_name_ar']],

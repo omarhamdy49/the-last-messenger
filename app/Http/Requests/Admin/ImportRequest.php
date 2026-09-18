@@ -32,7 +32,7 @@ class ImportRequest extends FormRequest
             'module' => [
                 'required',
                 'string',
-                'in:articles,media_programs,seerah_events,sahaba,quran_surahs,quran_verses,reciters,tafseer',
+                'in:articles,media_programs,seerah_events,sahaba',
             ],
             'file' => [
                 'required',

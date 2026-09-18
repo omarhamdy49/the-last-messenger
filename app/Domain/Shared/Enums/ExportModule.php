@@ -16,10 +16,11 @@ enum ExportModule: string
     case MEDIA_EPISODES = 'media_episodes';
     case SEERAH_EVENTS = 'seerah_events';
     case SAHABA = 'sahaba';
-    case QURAN_SURAHS = 'quran_surahs';
+    case QURAN_CHAPTERS = 'quran_chapters';
     case QURAN_VERSES = 'quran_verses';
+    case QURAN_TRANSLATIONS = 'quran_translations';
+    case QURAN_TAFSIRS = 'quran_tafsirs';
     case QURAN_RECITERS = 'quran_reciters';
-    case QURAN_TAFSEER = 'quran_tafseer';
 
     /**
      * Get all values as array
@@ -43,10 +44,11 @@ enum ExportModule: string
             self::MEDIA_EPISODES => 'Media Episodes',
             self::SEERAH_EVENTS => 'Seerah Events',
             self::SAHABA => 'Companions (Sahaba)',
-            self::QURAN_SURAHS => 'Quran Surahs',
+            self::QURAN_CHAPTERS => 'Quran Chapters',
             self::QURAN_VERSES => 'Quran Verses',
+            self::QURAN_TRANSLATIONS => 'Quran Translations',
+            self::QURAN_TAFSIRS => 'Quran Tafsirs',
             self::QURAN_RECITERS => 'Quran Reciters',
-            self::QURAN_TAFSEER => 'Quran Tafseer',
         };
     }
 }

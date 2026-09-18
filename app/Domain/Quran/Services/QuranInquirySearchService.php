@@ -4,28 +4,24 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Services;
 
-use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
-
 /**
  * Powers the public "Ask the Quran" inquiry search.
  *
- * Sends a free-text inquiry to the authless quran.com v4 search endpoint — the
- * same canonical corpus the quran.ai MCP wraps — and maps the matching verses
- * (Arabic + a single localized translation) into a flat, view-ready shape.
- *
- * No LLM and no MCP handshake are involved: this is keyword/semantic verse
- * retrieval against canonical scripture, so results are grounded by construction.
+ * Since 006 this is a local search: the whole corpus and its translations live in
+ * our own tables, so the inquiry runs against `SearchService` instead of the
+ * authless quran.com endpoint it used to call at request time. Results are still
+ * grounded by construction — this is keyword retrieval over canonical scripture,
+ * with no LLM and no MCP handshake involved.
  */
 final class QuranInquirySearchService
 {
-    /** Locales the app ships; mapped 1:1 to quran.com translation language codes. */
+    /** Locales the app ships; a translation resource is picked per locale. */
     private const SUPPORTED_LOCALES = ['ar', 'en', 'fr', 'tr', 'ur'];
 
-    private const CACHE_TTL_SECONDS = 86400; // 24h — canonical results are stable.
-
-    private const REQUEST_TIMEOUT_SECONDS = 8;
+    public function __construct(
+        private readonly SearchService $search,
+        private readonly ReaderService $reader,
+    ) {}
 
     /**
      * Run an inquiry and return matching verses.
@@ -36,8 +32,6 @@ final class QuranInquirySearchService
      *     translationName: ?string,
      *     results: list<array{verseKey:string, surah:int, ayah:int, arabic:string, translation:?string, url:string}>
      * }
-     *
-     * @throws \RuntimeException when the upstream search is unreachable or errors.
      */
     public function search(string $query, string $locale = 'ar', int $limit = 20): array
     {
@@ -49,30 +43,15 @@ final class QuranInquirySearchService
             return ['query' => $query, 'total' => 0, 'translationName' => null, 'results' => []];
         }
 
-        $cacheKey = sprintf('quran_inquiry:%s:%d:%s', $locale, $limit, md5($query));
+        $result = $this->run($this->normalizeQuery($query), $locale, $limit);
 
-        return Cache::remember($cacheKey, self::CACHE_TTL_SECONDS, function () use ($query, $locale, $limit): array {
-            return $this->fetch($query, $locale, $limit);
-        });
-    }
-
-    /**
-     * @return array{query:string, total:int, translationName:?string, results:list<array<string,mixed>>}
-     */
-    private function fetch(string $query, string $locale, int $limit): array
-    {
-        $normalized = $this->normalizeQuery($query);
-        $result = $this->requestSearch($normalized, $locale, $limit);
-
-        // Arabic recall: quran.com matches the literal verse text, so "الصبر" finds
+        // Arabic recall: the index holds the literal verse text, so "الصبر" finds
         // nothing while "صبر" does. If an Arabic query carrying the definite article
         // (ال) returns no verses, retry once without it before giving up.
-        if ($result['total'] === 0 && preg_match('/^ال.{2,}/u', $normalized) === 1) {
-            $fallback = $this->requestSearch(mb_substr($normalized, 2), $locale, $limit);
+        if ($result['total'] === 0 && preg_match('/^ال.{2,}/u', $this->normalizeQuery($query)) === 1) {
+            $fallback = $this->run(mb_substr($this->normalizeQuery($query), 2), $locale, $limit);
             if ($fallback['total'] > 0) {
-                $fallback['query'] = $query;
-
-                return $fallback;
+                $result = $fallback;
             }
         }
 
@@ -82,83 +61,52 @@ final class QuranInquirySearchService
     }
 
     /**
-     * Single quran.com search round-trip + mapping.
-     *
      * @return array{query:string, total:int, translationName:?string, results:list<array<string,mixed>>}
      */
-    private function requestSearch(string $query, string $locale, int $limit): array
+    private function run(string $query, string $locale, int $limit): array
     {
-        $baseUrl = rtrim((string) config('services.quran.public_api_url'), '/');
+        // Arabic readers get the verse text itself, so no translation is attached;
+        // every other locale gets the reader's default translation, which is also
+        // what SearchService falls back to, so the name always matches the text.
+        $edition = $locale === 'ar' ? null : $this->reader->defaultTranslation($locale);
 
-        $params = [
-            'q' => $query,
-            'size' => $limit,
-            'page' => 1,
-        ];
-        // quran.com search returns HTTP 204 (empty) when language=ar; for Arabic we
-        // omit it and match against the Arabic verse text directly. For the other
-        // locales the language code selects the translation edition to return.
-        if ($locale !== 'ar') {
-            $params['language'] = $locale;
-        }
+        $found = $this->search->advanced(
+            query: $query,
+            translationIds: $edition === null ? [] : [$edition->id],
+            exact: false,
+            highlight: false,
+            page: 1,
+            size: $limit,
+            locale: $locale,
+        );
 
-        try {
-            $response = Http::timeout(self::REQUEST_TIMEOUT_SECONDS)
-                ->acceptJson()
-                ->retry(2, 200)
-                ->get("{$baseUrl}/search", $params);
-        } catch (\Throwable $e) {
-            Log::warning('Quran inquiry search failed', ['query' => $query, 'error' => $e->getMessage()]);
-            throw new \RuntimeException('quran_inquiry_unreachable', previous: $e);
-        }
-
-        if ($response->failed()) {
-            Log::warning('Quran inquiry search non-200', ['query' => $query, 'status' => $response->status()]);
-            throw new \RuntimeException('quran_inquiry_failed');
-        }
-
-        $payload = $response->json('search') ?? [];
         $results = [];
-        $translationName = null;
-
-        foreach ($payload['results'] ?? [] as $row) {
-            $verseKey = (string) ($row['verse_key'] ?? '');
-            if (! str_contains($verseKey, ':')) {
-                continue;
-            }
-            [$surah, $ayah] = array_map('intval', explode(':', $verseKey, 2));
-
-            // For Arabic we requested no translation edition, so any default the API
-            // returns would be a mismatched English line under Arabic — skip it.
-            $translation = null;
-            if ($locale !== 'ar' && ! empty($row['translations'][0]['text'])) {
-                // quran.com wraps matched terms in <em>; strip markup before display.
-                $translation = trim(html_entity_decode(strip_tags((string) $row['translations'][0]['text'])));
-                $translationName ??= $row['translations'][0]['name'] ?? null;
-            }
+        foreach ($found['verses'] as $row) {
+            $translation = $locale === 'ar' || $row['translation'] === null
+                ? null
+                : trim(html_entity_decode(strip_tags((string) $row['translation'])));
 
             $results[] = [
-                'verseKey' => $verseKey,
-                'surah' => $surah,
-                'ayah' => $ayah,
-                'arabic' => trim((string) ($row['text'] ?? '')),
-                'translation' => $translation !== '' ? $translation : null,
-                'url' => url("/quran/{$surah}")."#v{$ayah}",
+                'verseKey' => (string) $row['verse_key'],
+                'surah' => (int) $row['chapter'],
+                'ayah' => (int) $row['verse'],
+                'arabic' => trim((string) $row['text']),
+                'translation' => ($translation ?? '') !== '' ? $translation : null,
+                'url' => url('/quran/'.(int) $row['chapter']).'#v'.(int) $row['verse'],
             ];
         }
 
         return [
             'query' => $query,
-            'total' => (int) ($payload['total_results'] ?? count($results)),
-            'translationName' => $translationName,
+            'total' => (int) $found['pagination']['total_records'],
+            'translationName' => $edition?->displayName($locale),
             'results' => $results,
         ];
     }
 
     /**
      * Strip Arabic diacritics (harakat) and tatweel so an Arabic inquiry matches
-     * the canonical verse text, which quran.com indexes without them. No-op for
-     * Latin scripts.
+     * the canonical verse text, which is indexed without them. No-op for Latin.
      */
     private function normalizeQuery(string $query): string
     {

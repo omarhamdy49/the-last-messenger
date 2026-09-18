@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Web;
 
-use App\Domain\Quran\Models\ReciterProfile;
+use App\Domain\Quran\Models\Chapter;
+use App\Domain\Quran\Models\QuranResource;
+use App\Domain\Quran\Models\Translation;
+use App\Domain\Quran\Models\Verse;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Enums\FavorableType;
 use App\Domain\Shared\Services\FavoriteService;
@@ -288,18 +291,36 @@ final class ProfileFavoritesTest extends TestCase
     // Reciter profiles (Quran) are bookmarkable
     // ---------------------------------------------------------------------
 
-    public function test_user_can_favorite_a_reciter_profile(): void
+    public function test_user_can_favorite_a_reciter(): void
     {
-        $profile = ReciterProfile::query()->create(['identity_key' => 't:husary', 'slug' => 'husary', 'is_active' => true]);
-        $profile->translations()->create(['locale' => 'ar', 'name' => 'الحصري']);
+        $reciter = QuranResource::factory()->chapterReciter()->create(['slug' => 'husary', 'name' => 'Al-Husary']);
+        $reciter->syncTranslations(['name' => ['ar' => 'الحصري']]);
         $user = User::factory()->create();
 
         $this->actingAs($user)
-            ->postJson(route('public.favorites.store'), ['type' => 'reciter', 'id' => $profile->id])
+            ->postJson(route('public.favorites.store'), ['type' => 'reciter', 'id' => $reciter->id])
             ->assertCreated();
 
-        $this->assertDatabaseHas('favorites', ['user_id' => $user->id, 'favorable_id' => $profile->id]);
+        $this->assertDatabaseHas('favorites', ['user_id' => $user->id, 'favorable_id' => $reciter->id]);
         $this->actingAs($user)->get(route('public.favorites'))->assertOk()->assertSee('الحصري');
-        $this->assertContains($profile->id, app(FavoriteService::class)->favoritedContentIds($user, FavorableType::RECITER));
+        $this->assertContains($reciter->id, app(FavoriteService::class)->favoritedContentIds($user, FavorableType::RECITER));
+    }
+
+    public function test_user_can_favorite_a_verse(): void
+    {
+        Chapter::factory()->number(1)->withVerses(2)->create();
+        $verse = Verse::query()->where('verse_key', '1:2')->firstOrFail();
+        $resource = QuranResource::factory()->translation('ar')->asDefault()->create();
+        Translation::factory()->create(['resource_id' => $resource->id, 'verse_id' => $verse->id, 'text' => 'الحمد لله رب العالمين']);
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson(route('public.favorites.store'), ['type' => 'quran', 'id' => $verse->id])
+            ->assertCreated();
+
+        $this->actingAs($user)->get(route('public.favorites'))
+            ->assertOk()
+            ->assertSee('الحمد لله رب العالمين')
+            ->assertSee(route('public.quran.surah', 1).'#verse-1:2', false);
     }
 }

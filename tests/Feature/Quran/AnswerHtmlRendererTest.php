@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Quran;
 
+use App\Domain\Quran\Models\Chapter;
 use App\Domain\Quran\Services\AnswerHtmlRenderer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 final class AnswerHtmlRendererTest extends TestCase
@@ -16,18 +16,14 @@ final class AnswerHtmlRendererTest extends TestCase
     private function seedSurahs(): void
     {
         $rows = [
-            ['id' => 1, 'name_ar' => 'سُورَةُ ٱلْفَاتِحَةِ', 'name_en' => 'Al-Faatiha', 'transliteration' => 'Al-Faatiha'],
-            ['id' => 2, 'name_ar' => 'سُورَةُ البَقَرَةِ', 'name_en' => 'Al-Baqara', 'transliteration' => 'Al-Baqara'],
+            1 => ['سُورَةُ ٱلْفَاتِحَةِ', 'Al-Faatiha'],
+            2 => ['سُورَةُ البَقَرَةِ', 'Al-Baqara'],
             // Uthmani name carries a Quranic annotation mark (U+06E1) — must still match "النحل".
-            ['id' => 16, 'name_ar' => 'سُورَةُ النَّحۡلِ', 'name_en' => 'An-Nahl', 'transliteration' => 'An-Nahl'],
-            ['id' => 29, 'name_ar' => 'سُورَةُ العَنكَبُوتِ', 'name_en' => 'Al-Ankaboot', 'transliteration' => 'Al-Ankaboot'],
+            16 => ['سُورَةُ النَّحۡلِ', 'An-Nahl'],
+            29 => ['سُورَةُ العَنكَبُوتِ', 'Al-Ankaboot'],
         ];
-        foreach ($rows as $row) {
-            DB::table('quran_surahs')->insert(array_merge($row, [
-                'revelation_place' => 'makkah', 'revelation_order' => $row['id'],
-                'bismillah_pre' => true, 'verses_count' => 7, 'pages' => json_encode([1]),
-                'created_at' => now(), 'updated_at' => now(),
-            ]));
+        foreach ($rows as $id => [$arabic, $simple]) {
+            Chapter::factory()->number($id)->create(['name_arabic' => $arabic, 'name_simple' => $simple]);
         }
     }
 

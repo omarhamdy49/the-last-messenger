@@ -5,10 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Domain\Blog\Importers\ArticleImporter;
-use App\Domain\Quran\Importers\QuranSurahImporter;
-use App\Domain\Quran\Importers\QuranVerseImporter;
-use App\Domain\Quran\Importers\ReciterImporter;
-use App\Domain\Quran\Importers\TafseerImporter;
 use App\Domain\Seerah\Importers\SeerahEventImporter;
 use App\Domain\Shared\Exceptions\ImporterNotFoundException;
 use App\Domain\Shared\Models\Import;
@@ -411,10 +407,6 @@ class ImportController extends Controller
         return match ($import->module) {
             'articles' => new ArticleImporter($import),
             'seerah_events' => new SeerahEventImporter($import),
-            'quran_surahs' => new QuranSurahImporter($import),
-            'quran_verses' => new QuranVerseImporter($import),
-            'reciters' => new ReciterImporter($import),
-            'tafseer' => new TafseerImporter($import),
             default => throw ImporterNotFoundException::forModule($import->module),
         };
     }
@@ -428,10 +420,6 @@ class ImportController extends Controller
             'articles',
             'seerah_events',
             'sahaba',
-            'quran_surahs',
-            'quran_verses',
-            'reciters',
-            'tafseer',
         ]);
     }
 
@@ -454,22 +442,6 @@ class ImportController extends Controller
             'sahaba' => [
                 'required' => ['name_ar', 'name_en'],
                 'optional' => ['name_fr', 'name_tr', 'name_ur', 'tribe', 'birth_date', 'death_date', 'battles', 'status'],
-            ],
-            'quran_surahs' => [
-                'required' => ['number', 'name_ar', 'name_en', 'revelation_place', 'verses_count'],
-                'optional' => ['name_fr', 'name_tr', 'name_ur', 'meaning_ar', 'meaning_en', 'meaning_fr', 'meaning_tr', 'meaning_ur', 'revelation_order', 'words_count', 'letters_count', 'juz', 'page_number', 'description_ar', 'description_en', 'description_fr', 'description_tr', 'description_ur', 'theme_ar', 'theme_en', 'theme_fr', 'theme_tr', 'theme_ur'],
-            ],
-            'quran_verses' => [
-                'required' => ['surah_number', 'ayah_number', 'arabic_text', 'english_translation'],
-                'optional' => ['transliteration', 'juz_number', 'page_number', 'french_translation', 'turkish_translation', 'urdu_translation'],
-            ],
-            'reciters' => [
-                'required' => ['name_ar', 'name_en'],
-                'optional' => ['name_fr', 'name_tr', 'name_ur', 'country', 'style', 'biography_ar', 'biography_en', 'biography_fr', 'biography_tr', 'biography_ur', 'featured'],
-            ],
-            'tafseer' => [
-                'required' => ['surah_number', 'ayah_number', 'source', 'author', 'tafseer_ar', 'tafseer_en'],
-                'optional' => ['tafseer_fr', 'tafseer_tr', 'tafseer_ur'],
             ],
             default => ['required' => [], 'optional' => []],
         };

@@ -209,7 +209,7 @@ class ActivityLogController extends Controller
             MediaProgram::class => ['label' => 'برنامج إعلامي', 'route' => 'admin.media-programs.show'],
             SeerahEvent::class => ['label' => 'حدث سيرة', 'route' => 'admin.seerah-events.show'],
             Muslim::class => ['label' => 'شخصية', 'route' => 'admin.genealogy.show'],
-            Verse::class => ['label' => 'آية قرآنية', 'route' => 'admin.verses.show'],
+            Verse::class => ['label' => 'آية قرآنية', 'route' => 'admin.quran.verses.show'],
             User::class => ['label' => 'مستخدم', 'route' => 'admin.users.show'],
         ];
     }

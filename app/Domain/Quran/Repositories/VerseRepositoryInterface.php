@@ -4,123 +4,120 @@ declare(strict_types=1);
 
 namespace App\Domain\Quran\Repositories;
 
-use App\Domain\Quran\Models\TranslationResource;
+use App\Domain\Quran\DTOs\ReaderOptions;
+use App\Domain\Quran\DTOs\VerseEditData;
+use App\Domain\Quran\Enums\SectionType;
 use App\Domain\Quran\Models\Verse;
-use App\Domain\Quran\Models\Word;
-use App\Domain\Shared\Contracts\RepositoryInterface;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection as SupportCollection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
-interface VerseRepositoryInterface extends RepositoryInterface
+interface VerseRepositoryInterface
 {
-    /**
-     * Get verses by surah
-     */
-    public function getBySurah(int $surahId): Collection;
+    /** Columns every verse list selects. */
+    public const BASE_COLUMNS = [
+        'id', 'chapter_id', 'verse_number', 'verse_key', 'verse_index', 'juz_number', 'hizb_number', 'rub_el_hizb_number',
+        'ruku_number', 'manzil_number', 'page_number', 'sajdah_type', 'sajdah_number', 'image_url', 'image_path', 'image_width',
+    ];
 
     /**
-     * One surah's verses, paginated, carrying only what a listing row shows.
+     * @param  array{chapter?: int|null, juz?: int|null, page?: int|null, sajdah?: bool|null, locked?: bool|null, q?: string|null}  $filters
+     */
+    public function paginateAdmin(array $filters, int $perPage): LengthAwarePaginator;
+
+    /**
+     * One verse with everything an editor sees: chapter, words + glosses,
+     * translations, tafsirs and audio files, each with its resource.
+     */
+    public function findForAdmin(int $id): ?Verse;
+
+    public function update(int $id, VerseEditData $data): Verse;
+
+    /**
+     * Set a word's glosses: resource id => text. Empty text deletes the gloss; ids that
+     * are not word-translation/transliteration resources are ignored.
      *
-     * Deliberately narrower than getBySurah(): no translation-resource
-     * eager-load and no cache, because the admin surah page renders a page of
-     * ten rows at a time and must show a verse the moment it is edited.
+     * @param  array<int, string|null>  $glosses
      */
-    public function paginateBySurah(int $surahId, int $perPage): LengthAwarePaginator;
+    public function updateWordGlosses(int $wordId, array $glosses): int;
 
     /**
-     * Active translation editions (resources), excluding the Arabic source text.
+     * @param  list<int>  $ids
+     */
+    public function setLocked(array $ids, bool $locked): int;
+
+    /**
+     * @param  list<string>  $extraColumns
+     * @return Collection<int, Verse>
+     */
+    public function byChapter(int $chapterId, array $extraColumns = []): Collection;
+
+    /**
+     * @param  list<string>  $extraColumns
+     */
+    public function pageByChapter(int $chapterId, int $page, int $perPage, array $extraColumns = []): LengthAwarePaginator;
+
+    /**
+     * @param  list<string>  $extraColumns
+     */
+    public function pageBySection(SectionType $type, int $number, int $page, int $perPage, array $extraColumns = []): LengthAwarePaginator;
+
+    /**
+     * Verses of a mushaf page. For a non-default mushaf the range comes from its page
+     * map.
      *
-     * @return Collection<int, TranslationResource>
+     * @param  list<string>  $extraColumns
+     * @return Collection<int, Verse>
      */
-    public function getActiveTranslationResources(): Collection;
+    public function byPage(int $pageNumber, ?int $mushafId, array $extraColumns = []): Collection;
 
     /**
-     * One translation edition's text for a whole surah, keyed by verse id (cached).
+     * @param  list<string>  $extraColumns
+     */
+    public function pageByRange(int $fromId, int $toId, int $page, int $perPage, array $extraColumns = []): LengthAwarePaginator;
+
+    /**
+     * @param  list<string>  $extraColumns
+     */
+    public function byKey(string $verseKey, array $extraColumns = []): ?Verse;
+
+    /**
+     * @param  list<string>  $keys
+     * @param  list<string>  $extraColumns
+     * @return Collection<int, Verse>
+     */
+    public function byKeys(array $keys, array $extraColumns = []): Collection;
+
+    /**
+     * @param  array<string, int>  $axisFilter  e.g. ['chapter_id' => 2] or ['juz_number' => 30]
+     * @param  list<string>  $extraColumns
+     */
+    public function random(array $axisFilter, array $extraColumns = []): ?Verse;
+
+    /**
+     * Verse references (key, chapter, number) for one chapter or the whole Quran.
      *
-     * @return array<int, string>
-     */
-    public function getSurahTranslationByResource(int $surahNumber, int $resourceId): array;
-
-    /**
-     * Get verse by surah number and verse number
-     */
-    public function getBySurahAndVerse(int $surahNumber, int $verseNumber): ?Verse;
-
-    /**
-     * Get verses by Juz
-     */
-    public function getByJuz(int $juz, int $perPage = 50): LengthAwarePaginator;
-
-    /**
-     * Get verses by Hizb (1-60), paginated and grouped by surah order.
-     */
-    public function getByHizb(int $hizb, int $perPage = 50): LengthAwarePaginator;
-
-    /**
-     * Get verses by page
-     */
-    public function getByPage(int $page): Collection;
-
-    /**
-     * Get all Sajda verses
-     */
-    public function getSajdaVerses(): Collection;
-
-    /**
-     * Search in Arabic text
-     */
-    public function searchArabic(string $query, int $perPage = 20): LengthAwarePaginator;
-
-    /**
-     * Search in translations
-     */
-    public function searchTranslation(string $query, string $language, int $perPage = 20): LengthAwarePaginator;
-
-    /**
-     * Get random verse
-     */
-    public function getRandomVerse(): ?Verse;
-
-    /**
-     * Get paginated verses with filters
-     */
-    public function paginateWithFilters(
-        int $perPage = 15,
-        string $search = '',
-        string $sortBy = 'verse_key',
-        array $filters = []
-    ): LengthAwarePaginator;
-
-    /**
-     * Bulk delete verses
-     */
-    public function bulkDelete(array $ids): int;
-
-    /**
-     * Search verses with filters
-     */
-    public function search(
-        string $query,
-        int $perPage = 15,
-        ?int $surahId = null,
-        string $language = 'en'
-    ): LengthAwarePaginator;
-
-    /**
-     * Count Sajda verses
-     */
-    public function countSajdaVerses(): int;
-
-    /**
-     * Printed-mushaf word layout for a surah, ordered for line-by-line rendering
-     * (page → line → position).
+     * Deliberately plain rows, not models: the only caller expands a URL template
+     * for every verse, and hydrating 6,236 Verse models to read three columns is
+     * pure waste.
      *
-     * Plain rows, not Word models: البقرة alone is 6,402 words, and a cached
-     * Eloquent collection that size costs ~11 MB serialized and blows the 128 MB
-     * memory limit on unserialize — the surah page 500s under any load.
-     *
-     * @return SupportCollection<int, object>
+     * @return list<array{verse_key: string, chapter_id: int, verse_number: int}>
      */
-    public function getMushafWordsBySurah(int $surahNumber): SupportCollection;
+    public function references(?int $chapterId): array;
+
+    /**
+     * Whole-Quran (or filtered) id + key + one text column, for the raw scripts API.
+     *
+     * @param  array<string, int|string>  $axisFilter
+     * @return Collection<int, object>
+     */
+    public function scriptRows(string $column, array $axisFilter): Collection;
+
+    /**
+     * Words, glosses, translations, tafsirs and audio for the given verses, in a
+     * fixed number of queries regardless of how many verses there are.
+     *
+     * @param  list<int>  $verseIds
+     * @return array<int, array{words: list<array<string, mixed>>, translations: array<int, array{id: int, text: string, foot_notes: array<string, string>|null}>, tafsirs: array<int, array{id: int, text: string}>, audio: ?array{url: string, segments: ?array<int, array<int, int>>, duration_ms: ?int}}>
+     */
+    public function payload(array $verseIds, ReaderOptions $options): array;
 }

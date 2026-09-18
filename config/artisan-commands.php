@@ -38,26 +38,20 @@ return [
         'quran' => [
             'icon' => 'book-open',
             'commands' => [
-                'quran:import' => ['queued' => true, 'danger' => true],
-                'quran:sync' => ['queued' => true],
-                'quran:sync-arabic' => ['queued' => true],
-                'quran:import-editions' => ['queued' => true],
-                'quran:import-translation' => ['queued' => true],
-                'quran:import-tafsir' => ['queued' => true],
-                'quran:import-reciters' => ['queued' => true],
-                'quran:import-recitations' => ['queued' => true],
-                // Replaces the whole-surah audio of every mapped reciter so it
-                // matches the timings Phase 2 highlights from — hence danger.
-                // --force because --fresh is guarded by ConfirmableTrait and
-                // nothing here can answer a console prompt.
-                'quran:sync-mp3quran' => [
-                    'queued' => true,
-                    'danger' => true,
-                    'defaults' => ['--force' => true],
-                ],
-                'quran:import-mushaf-layout' => ['queued' => true],
-                'quran:enrich-reciters' => ['queued' => true],
-                'quran:backfill-hizb' => ['queued' => true],
+                // Quran Foundation import & sync (006). Reads QF production; writes only
+                // quran_* tables. Every step is idempotent and prints reconciled counts.
+                'quran:qf:doctor' => ['queued' => false],
+                'quran:qf:bootstrap' => ['queued' => true, 'danger' => true],
+                'quran:qf:import-structure' => ['queued' => true],
+                'quran:qf:import-verses' => ['queued' => true],
+                'quran:qf:import-words' => ['queued' => true],
+                'quran:qf:import-catalogue' => ['queued' => true, 'defaults' => ['--with-info' => true]],
+                'quran:qf:download-assets' => ['queued' => true, 'danger' => true],
+                'quran:qf:sync' => ['queued' => true],
+                'quran:qf:import-chapter-infos' => ['queued' => true],
+                'quran:qf:import-timestamps' => ['queued' => true],
+                'quran:reciter:fetch' => ['queued' => true],
+                'quran:reciter:images' => ['queued' => true, 'defaults' => ['--download' => true]],
                 // Manual-only (no longer scheduled). Queued because a first run
                 // after a long gap deletes in batches until the table is clear.
                 'quran:ai-prune' => ['queued' => true],

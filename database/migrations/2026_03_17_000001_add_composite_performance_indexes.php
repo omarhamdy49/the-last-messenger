@@ -17,10 +17,8 @@ use Illuminate\Support\Facades\Schema;
  *   is_ready row-by-row. With it, both predicates are resolved in a single B-tree
  *   lookup. Estimated improvement: 3-5x on tables with O(10 k) rows per locale.
  *
- * quran_verse_translations (lang, verse_id)
- *   Supports "get all Arabic translations in verse_id order" queries used by the
- *   Quran listing endpoint. The existing single-column lang index cannot satisfy
- *   ORDER BY verse_id without a filesort. Covering composite eliminates that sort.
+ * quran_verse_translations (lang, verse_id) — removed by 006-quran-qf-refactor; the
+ *   table no longer exists (translations are per resource in quran_translations).
  *
  * seerah_events (hijri_year, hijri_month, hijri_day)
  *   Chronological timeline queries filter on hijri_year and sort on hijri_month /
@@ -53,13 +51,6 @@ return new class extends Migration
             });
         }
 
-        // quran_verse_translations: language-scoped verse listing with ordering
-        if (Schema::hasTable('quran_verse_translations')) {
-            Schema::table('quran_verse_translations', function (Blueprint $table) {
-                $table->index(['lang', 'verse_id'], 'idx_qvt_lang_verse');
-            });
-        }
-
         // seerah_events: chronological timeline scan
         if (Schema::hasTable('seerah_events')) {
             Schema::table('seerah_events', function (Blueprint $table) {
@@ -85,12 +76,6 @@ return new class extends Migration
         if (Schema::hasTable('article_locale')) {
             Schema::table('article_locale', function (Blueprint $table) {
                 $table->dropIndex('idx_article_locale_ready');
-            });
-        }
-
-        if (Schema::hasTable('quran_verse_translations')) {
-            Schema::table('quran_verse_translations', function (Blueprint $table) {
-                $table->dropIndex('idx_qvt_lang_verse');
             });
         }
 

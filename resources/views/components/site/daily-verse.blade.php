@@ -19,9 +19,8 @@
     $locale = app()->getLocale();
     $isRtl = in_array($locale, ['ar', 'ur'], true);
 
-    // quran_surahs.id IS the mushaf number 1–114 (see SurahDTO::fromModel), so
-    // it doubles as the {surahNumber} route parameter. Do not swap in
-    // revelation_order here — that column holds the mushaf number too and the
+    // quran_chapters.id IS the mushaf number 1–114, so it doubles as the
+    // {surahNumber} route parameter. Do not swap in revelation_order here — the
     // two have been confused before.
     $surahNumber = $verse['surah_id'] ?? null;
     $verseNumber = $verse['verse_number'] ?? null;

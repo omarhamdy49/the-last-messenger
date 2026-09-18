@@ -8,8 +8,9 @@ use App\Domain\Blog\Models\Category;
 use App\Domain\Media\Models\MediaEpisode;
 use App\Domain\Media\Models\MediaEpisodeTranslation;
 use App\Domain\People\Models\Muslim;
-use App\Domain\Quran\Models\Surah;
-use App\Domain\Quran\Models\Verse;
+use App\Domain\Quran\Models\Chapter;
+use App\Domain\Quran\Models\ChapterAudioFile;
+use App\Domain\Quran\Models\QuranResource;
 use App\Domain\Seerah\Models\SeerahEventType;
 use App\Domain\Shared\Models\SavedFilter;
 use App\Models\Article;
@@ -159,28 +160,12 @@ class ApiRouteSmokeTest extends TestCase
             'description' => ['ar' => 'وصف', 'en' => 'Description'],
         ]);
 
-        $surah = Surah::query()->create([
-            'revelation_place' => 'makkah',
-            'revelation_order' => 1,
-            'bismillah_pre' => true,
-            'name_ar' => 'الفاتحة',
-            'name_en' => 'Al-Fatihah',
-            'transliteration' => 'Al-Fatihah',
-            'verses_count' => 1,
-            'pages' => [1],
-        ]);
-        Verse::query()->create([
-            'surah_id' => $surah->id,
-            'verse_number' => 1,
-            'verse_key' => '1:1',
-            'juz_number' => 1,
-            'hizb_number' => 1,
-            'rub_el_hizb_number' => 1,
-            'ruku_number' => 1,
-            'manzil_number' => 1,
-            'sajdah_number' => 1,
-            'page_number' => 1,
-        ]);
+        Chapter::factory()->number(1)->withVerses(3)->create();
+        $translation = QuranResource::factory()->translation('en')->asDefault()->create();
+        $tafsir = QuranResource::factory()->tafsir('ar')->create();
+        $recitation = QuranResource::factory()->recitation()->create();
+        $chapterReciter = QuranResource::factory()->chapterReciter()->asDefault()->create();
+        ChapterAudioFile::factory()->create(['resource_id' => $chapterReciter->id, 'chapter_id' => 1]);
 
         $eventType = SeerahEventType::query()->firstOrCreate(
             ['slug' => 'battle'],
@@ -252,13 +237,35 @@ class ApiRouteSmokeTest extends TestCase
             'v1.media.programs.episodes:slug' => $program->slug,
             'v1.media.programs.episode:slug' => $program->slug,
             'v1.media.programs.episode:episodeNumber' => $episode->episode_number,
-            'v1.quran.juz:juz' => 1,
-            'v1.quran.page:page' => 1,
-            'v1.quran.by-revelation:place' => $surah->revelation_place,
-            'v1.quran.surah:number' => $surah->revelation_order,
-            'v1.quran.verses:surahNumber' => $surah->revelation_order,
-            'v1.quran.verse:surahNumber' => $surah->revelation_order,
-            'v1.quran.verse:verseNumber' => 1,
+            'v1.quran.chapters.show:id' => 1,
+            'v1.quran.chapters.info:id' => 1,
+            'v1.quran.verses.by-chapter:chapter' => 1,
+            'v1.quran.verses.by-page:page' => 1,
+            'v1.quran.verses.by-juz:number' => 1,
+            'v1.quran.verses.by-hizb:number' => 1,
+            'v1.quran.verses.by-rub-el-hizb:number' => 1,
+            'v1.quran.verses.by-manzil:number' => 1,
+            'v1.quran.verses.by-ruku:number' => 1,
+            'v1.quran.verses.by-key:key' => '1:1',
+            'v1.quran.sections.juz.show:number' => 1,
+            'v1.quran.sections.hizb.show:number' => 1,
+            'v1.quran.sections.rub_el_hizb.show:number' => 1,
+            'v1.quran.sections.manzil.show:number' => 1,
+            'v1.quran.sections.ruku.show:number' => 1,
+            'v1.quran.pages.show:number' => 1,
+            'v1.quran.scripts:script' => 'uthmani',
+            'v1.quran.translations.full:resource' => $translation->id,
+            'v1.quran.tafsirs.full:resource' => $tafsir->id,
+            'v1.quran.recitations.files:resource' => $recitation->id,
+            'v1.quran.resources.index:kind' => 'translations',
+            'v1.quran.resources.info:kind' => 'translations',
+            'v1.quran.resources.info:id' => $translation->id,
+            'v1.quran.chapter-recitations.index:resource' => $chapterReciter->id,
+            'v1.quran.chapter-recitations.show:resource' => $chapterReciter->id,
+            'v1.quran.chapter-recitations.show:chapter' => 1,
+            'v1.quran.audio.timestamp:resource' => $chapterReciter->id,
+            'v1.quran.audio.lookup:resource' => $chapterReciter->id,
+            'v1.quran.foot-notes.show:id' => 1,
             'v1.search.module:module' => 'article',
             'v1.seerah.by-gregorian-year:year' => $event->gregorian_date->year,
             'v1.seerah.by-hijri-year:year' => $event->hijri_year,

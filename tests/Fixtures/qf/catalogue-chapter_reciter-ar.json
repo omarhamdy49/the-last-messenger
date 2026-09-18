@@ -1,0 +1,80 @@
+{
+ "reciters": [
+  {
+   "id": 1,
+   "name": "Abdul Basit Abdul Samad",
+   "style": {
+    "name": "Mujawwad",
+    "translated_name": {
+     "name": "مجود",
+     "language_name": "arabic"
+    }
+   },
+   "qirat": {
+    "name": "Hafs",
+    "language_name": "english"
+   },
+   "translated_name": {
+    "name": "عبد الباسط عبد الصمد - مجود",
+    "language_name": "arabic"
+   }
+  },
+  {
+   "id": 159,
+   "name": "Maher al-Muaiqly",
+   "style": {
+    "name": "Murattal",
+    "translated_name": {
+     "name": "مرتل",
+     "language_name": "arabic"
+    }
+   },
+   "qirat": {
+    "name": "Hafs",
+    "language_name": "english"
+   },
+   "translated_name": {
+    "name": "Maher al-Muaiqly",
+    "language_name": "english"
+   }
+  },
+  {
+   "id": 7,
+   "name": "Mishari Rashid al-`Afasy",
+   "style": {
+    "name": "Murattal",
+    "translated_name": {
+     "name": "مرتل",
+     "language_name": "arabic"
+    }
+   },
+   "qirat": {
+    "name": "Hafs",
+    "language_name": "english"
+   },
+   "translated_name": {
+    "name": "مشاري راشد العفاسي",
+    "language_name": "arabic"
+   }
+  },
+  {
+   "id": 176,
+   "name": "Ahmed Abdelhamid Tahoun - beta",
+   "style": {
+    "name": "Murattal",
+    "translated_name": {
+     "name": "مرتل",
+     "language_name": "arabic"
+    }
+   },
+   "qirat": {
+    "name": "Hafs",
+    "language_name": "english"
+   },
+   "translated_name": {
+    "name": "Ahmed Abdelhamid Tahoun - beta",
+    "language_name": "english"
+   }
+  }
+ ]
+}

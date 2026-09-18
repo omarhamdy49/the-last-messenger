@@ -74,7 +74,7 @@ return [
     'usage' => [
         'seerah_events' => ':count حدثًا',
         'muslims' => ':count شخصية',
-        'quran_surahs' => ':count سورة',
+        'quran_chapters' => ':count سورة',
     ],
 
     'types' => [

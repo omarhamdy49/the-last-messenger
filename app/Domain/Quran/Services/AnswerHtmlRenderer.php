@@ -21,7 +21,7 @@ final class AnswerHtmlRenderer
     private const ARABIC_DIGITS = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
 
     public function __construct(
-        private readonly SurahNameIndex $names,
+        private readonly ChapterNameIndex $names,
         private readonly AnswerVerseLinker $linker,
     ) {}
 

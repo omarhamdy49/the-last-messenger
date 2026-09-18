@@ -67,7 +67,7 @@ return [
     'usage' => [
         'seerah_events' => ':count واقعات',
         'muslims' => ':count شخصیات',
-        'quran_surahs' => ':count سورتیں',
+        'quran_chapters' => ':count سورتیں',
     ],
     'types' => [
         'city' => 'شہر',

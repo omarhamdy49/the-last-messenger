@@ -6,7 +6,6 @@ namespace App\Providers;
 
 use App\Domain\Blog\Services\ArticleBulkHandler;
 use App\Domain\Media\Services\MediaProgramBulkHandler;
-use App\Domain\Quran\Services\VerseBulkHandler;
 use App\Domain\Seerah\Services\SeerahEventBulkHandler;
 use App\Domain\Shared\Contracts\PublicVisibilityProviderInterface;
 use App\Domain\Shared\Repositories\AdminLogRepository;
@@ -57,7 +56,7 @@ class SharedServiceProvider extends ServiceProvider
             fn (): LocationUsageRegistry => new LocationUsageRegistry([
                 ['table' => 'seerah_events', 'column' => 'location_id', 'label' => 'seerah_events'],
                 ['table' => 'muslims', 'column' => 'birth_place_id', 'label' => 'muslims'],
-                ['table' => 'quran_surahs', 'column' => 'revelation_location_id', 'label' => 'quran_surahs'],
+                ['table' => 'quran_chapters', 'column' => 'revelation_location_id', 'label' => 'quran_chapters'],
             ])
         );
 
@@ -115,7 +114,6 @@ class SharedServiceProvider extends ServiceProvider
                     adminLogger: $app->make(AdminLoggerService::class),
                     handlers: [
                         new ArticleBulkHandler,
-                        new VerseBulkHandler,
                         new SeerahEventBulkHandler,
                         new MediaProgramBulkHandler,
                     ],

@@ -112,7 +112,7 @@ class BackfillLocationsCommandTest extends TestCase
         $this->artisan('locations:backfill')
             ->expectsTable(
                 ['table', 'examined', 'resolved', 'no-match', 'ambiguous', 'already-assigned'],
-                [['muslims', 0, 0, 0, 0, 0], ['quran_surahs', 0, 0, 0, 0, 0]]
+                [['muslims', 0, 0, 0, 0, 0], ['quran_chapters', 0, 0, 0, 0, 0]]
             )
             ->assertExitCode(0);
 
@@ -149,14 +149,14 @@ class BackfillLocationsCommandTest extends TestCase
 
     public function test_surah_classification_is_untouched_by_the_backfill(): void
     {
-        DB::table('quran_surahs')->insert([
+        DB::table('quran_chapters')->insert([
             'id' => 1, 'revelation_place' => 'makkah', 'revelation_order' => 5,
-            'name_ar' => 'الفاتحة', 'name_en' => 'Al-Fatihah', 'verses_count' => 7,
+            'name_arabic' => 'الفاتحة', 'name_simple' => 'Al-Fatihah', 'name_complex' => 'Al-Fatihah', 'verses_count' => 7, 'first_page' => 1, 'last_page' => 1, 'bismillah_pre' => true,
         ]);
 
         $this->artisan('locations:backfill')->assertExitCode(0);
 
-        $surah = DB::table('quran_surahs')->find(1);
+        $surah = DB::table('quran_chapters')->find(1);
 
         $this->assertSame('makkah', $surah->revelation_place, 'the مكية/مدنية classification must never be rewritten');
         $this->assertSame($this->makkah->id, $surah->revelation_location_id);

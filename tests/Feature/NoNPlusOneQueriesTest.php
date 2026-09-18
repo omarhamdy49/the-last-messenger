@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature;
 
-use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Models\Chapter;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Models\SeerahEventType;
 use App\Domain\Shared\Models\Location;
@@ -43,7 +43,7 @@ class NoNPlusOneQueriesTest extends TestCase
 
         $this->getJson('/api/v1/seerah')->assertOk();
 
-        $queries = array_column(DB::getQueryLog(), 'query');
+        $queries = self::contentQueries();
         DB::disableQueryLog();
 
         // Constant: 3 language lookups (request locale), count, page, then one batch
@@ -55,34 +55,38 @@ class NoNPlusOneQueriesTest extends TestCase
         );
     }
 
-    public function test_quran_surahs_does_not_cause_n_plus_one(): void
+    public function test_quran_chapters_does_not_cause_n_plus_one(): void
     {
-        // Create a set of surahs to trigger potential N+1 scenarios
-        for ($i = 1; $i <= 5; $i++) {
-            Surah::query()->create([
-                'revelation_place' => 'makkah',
-                'revelation_order' => $i,
-                'bismillah_pre' => true,
-                'name_ar' => "سورة {$i}",
-                'name_en' => "Surah {$i}",
-                'transliteration' => "Surah-{$i}",
-                'verses_count' => 7,
-            ]);
-        }
+        Chapter::factory()->count(5)->sequence(fn ($sequence): array => ['id' => $sequence->index + 1])->create();
 
-        $queryCount = 0;
-        DB::listen(function () use (&$queryCount): void {
-            $queryCount++;
-        });
+        DB::flushQueryLog();
+        DB::enableQueryLog();
 
-        $this->getJson('/api/v1/quran/surahs');
+        $this->getJson('/api/v1/quran/chapters')->assertOk();
 
-        // A well-optimized list endpoint should not exceed ~5 queries
+        $queries = self::contentQueries();
+        DB::disableQueryLog();
+
+        // Chapters plus their translations; the rest is per-request infrastructure.
         $this->assertLessThanOrEqual(
             5,
-            $queryCount,
-            "Quran surahs uses too many queries: {$queryCount}. Check for N+1."
+            count($queries),
+            'Quran chapters uses too many queries: '.count($queries).'. Check for N+1.'.PHP_EOL.implode(PHP_EOL, $queries)
         );
+    }
+
+    /**
+     * Logged queries minus the per-request infrastructure every API route pays:
+     * the API client lookup and touch, and the active-language lookups.
+     *
+     * @return list<string>
+     */
+    private static function contentQueries(): array
+    {
+        return array_values(array_filter(
+            array_column(DB::getQueryLog(), 'query'),
+            static fn (string $query): bool => ! str_contains($query, '`api_clients`') && ! str_contains($query, 'from `languages`'),
+        ));
     }
 
     public function test_categories_index_does_not_cause_n_plus_one(): void

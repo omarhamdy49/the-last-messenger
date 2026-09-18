@@ -2,7 +2,7 @@
     Verse Card Component
 
     Displays a single verse with header, Arabic text, translation, and action buttons.
-    Includes optional tafseer accordion panel.
+    Tafsir is not shown inline: the header's book icon opens the shared verse modal.
 
     Expected Alpine.js context:
     - verse: current verse object (id, number, arabic, translation, transliteration, has_sajdah)
@@ -10,14 +10,13 @@
     - readingMode: 'arabic' | 'translation' | 'both'
     - fontSize: number (px)
     - showTransliteration: boolean
-    - openTafsir: object mapping verse.id to boolean
     - selectedTafsirId: number
     - $store.theme.dark: boolean
 
     Functions expected:
     - playVerse(verse), isVerseLoaded(verse), isVersePlaying(verse)
     - copyVerse(verse)
-    - toggleTafsir(verse)
+    - openVerseModal(verse, tab)
     - getTranslation(verse)
 --}}
 
@@ -73,10 +72,12 @@
                 </svg>
             </button>
 
-            {{-- Tafseer toggle button --}}
-            <button x-show="selectedTafsirId" @click="toggleTafsir(verse)"
+            {{-- Opens the shared verse modal on its tafsir tab — the same modal the
+                 reading view opens, so there is one place a verse is explained and the
+                 text is fetched only when it is asked for. --}}
+            <button @click="openVerseModal(verse, 'tafsir')"
                 class="p-2 rounded-lg transition-colors"
-                :class="openTafsir[verse.id]
+                :class="tafsirVerse && tafsirVerse.id === verse.id
                     ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white'
                     : ($store.theme.dark ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-gray-200 text-gray-600 hover:text-gray-900')"
                 :title="'{{ __('quran.public.show_tafsir') }}'"
@@ -92,11 +93,42 @@
     <div class="p-6">
         {{-- Arabic text --}}
         <div x-show="readingMode === 'arabic' || readingMode === 'both'" class="mb-4">
-            <p class="font-['Amiri'] leading-loose text-start"
+            {{-- Word by word: each word with its gloss; tap to hear it. --}}
+            <p x-show="wordByWord && verse.words && verse.words.length" x-cloak class="font-['Amiri'] leading-loose text-start"
+               :class="$store.theme.dark ? 'text-white' : 'text-gray-900'" :style="`font-size: ${fontSize}px`" dir="rtl" lang="ar">
+                <template x-for="(word, index) in (verse.words || [])" :key="index">
+                    {{-- playWord, not the bottom player: a word is a two-second sound, and
+                         routing it through the player replaced the surah recording and lost
+                         the listener's place in it. --}}
+                    <span class="wbw-word" role="button" tabindex="0"
+                          :aria-label="'{{ __('quran.public.play_word') }}: ' + word.text"
+                          :title="[word.transliteration, word.translation].filter(Boolean).join(' — ') || '{{ __('quran.public.play_word') }}'"
+                          @click="playWord(word)"
+                          @keydown.enter.prevent="playWord(word)">
+                        <span x-text="word.text"></span>
+                        <span x-show="word.type === 'word' && (word.translation || word.transliteration)" class="wbw-gloss"
+                              :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'">
+                            <span x-show="word.transliteration" class="block italic" x-text="word.transliteration"></span>
+                            <span x-text="word.translation"></span>
+                        </span>
+                    </span>
+                </template>
+            </p>
+            {{-- Tajweed script: server-sanitised <tajweed class> markup only. --}}
+            <p x-show="!(wordByWord && verse.words && verse.words.length) && verse.tajweed" x-cloak
+               @click="tapWordAt($event, verse)"
+               class="tajweed-text quran-text qw-tappable leading-loose text-start"
+               :class="$store.theme.dark ? 'text-white' : 'text-gray-900'" :style="`font-size: ${fontSize}px`" dir="rtl" lang="ar"
+               x-html="verse.tajweed"></p>
+            {{-- Tap any word to hear it — no markup around each word, and no need to
+                 turn on word-by-word display; see tapWordAt(). --}}
+            <p x-show="!(wordByWord && verse.words && verse.words.length) && !verse.tajweed" class="quran-text qw-tappable leading-loose text-start"
                :class="$store.theme.dark ? 'text-white' : 'text-gray-900'"
                :style="`font-size: ${fontSize}px`"
+               dir="rtl" lang="ar"
+               @click="tapWordAt($event, verse)"
                x-text="verse.arabic"
-               dir="rtl"
+               title="{{ __('quran.public.play_word') }}"
             ></p>
         </div>
 
@@ -108,10 +140,19 @@
         {{-- Translation (hidden when it would duplicate the Arabic verse,
              e.g. an Arabic "translation" of the Arabic text) --}}
         <div x-show="(readingMode === 'translation' || readingMode === 'both') && getTranslation(verse) && getTranslation(verse) !== verse.arabic">
-            <p class="text-lg leading-relaxed" :class="$store.theme.dark ? 'text-gray-300' : 'text-gray-700'" x-text="getTranslation(verse)"></p>
+            <p class="text-lg leading-relaxed" :class="$store.theme.dark ? 'text-gray-300' : 'text-gray-700'" x-text="getTranslation(verse)" dir="auto"></p>
+            {{-- Footnotes of the edition on screen --}}
+            <ol x-show="footNotes(verse).length" x-cloak class="mt-2 space-y-1 text-sm list-decimal ps-5" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'" dir="auto">
+                <template x-for="[id, note] in footNotes(verse)" :key="id">
+                    <li x-text="note"></li>
+                </template>
+            </ol>
         </div>
 
-        {{-- Tafsir accordion (loaded per verse, only when opened) --}}
-        <x-public.quran.tafseer-panel />
+        {{-- Verse image (calligraphy) --}}
+        <details x-show="verse.image_url" x-cloak class="mt-3">
+            <summary class="cursor-pointer text-sm font-semibold text-[#218838]">{{ __('quran.public.verse_image') }}</summary>
+            <img :src="verse.image_url" :alt="surah.nameAr + ' ' + verse.verse_key" loading="lazy" class="mt-2 max-w-full rounded-lg bg-white p-2">
+        </details>
     </div>
 </article>

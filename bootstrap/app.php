@@ -9,10 +9,13 @@ use App\Domain\Shared\Exceptions\EntityNotFoundException;
 use App\Http\Middleware\AddRequestId;
 use App\Http\Middleware\AdminAuthMiddleware;
 use App\Http\Middleware\AuthenticateApi;
+use App\Http\Middleware\AuthenticateApiClient;
 use App\Http\Middleware\CacheGuestPages;
+use App\Http\Middleware\EnsureApiClientScope;
 use App\Http\Middleware\LogApiRequest;
 use App\Http\Middleware\SecureApiResponseHeaders;
 use App\Http\Middleware\SetLocale;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -43,7 +46,16 @@ return Application::configure(basePath: dirname(__DIR__))
             'role' => RoleMiddleware::class,
             'abilities' => CheckAbilities::class,
             'ability' => CheckForAnyAbility::class,
+            'api.client' => AuthenticateApiClient::class,
+            'api.scope' => EnsureApiClientScope::class,
         ]);
+
+        // The API client must be resolved before user auth and before any throttle:
+        // the per-client limiter (throttle:api_client) reads it from the request.
+        $middleware->prependToPriorityList(
+            before: AuthenticatesRequests::class,
+            prepend: AuthenticateApiClient::class,
+        );
 
         $middleware->api(prepend: [
             HandleCors::class,

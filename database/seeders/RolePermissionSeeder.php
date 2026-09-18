@@ -59,6 +59,11 @@ class RolePermissionSeeder extends Seeder
             'quran' => [
                 'view quran',
                 'edit quran',
+                // Run QF imports/sync, download assets, fetch reciter sources.
+                'sync quran',
+            ],
+            'api_clients' => [
+                'manage api clients',
             ],
             'hadith_taxonomy' => [
                 'view collections',

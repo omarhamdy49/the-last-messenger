@@ -21,17 +21,6 @@ return new class extends Migration
             }
         }
 
-        // Drop from quran_reciters table
-        if (Schema::hasTable('quran_reciters')) {
-            $columns = Schema::getColumnListing('quran_reciters');
-            $columnsToRemove = array_intersect(['name', 'description'], $columns);
-            if (! empty($columnsToRemove)) {
-                Schema::table('quran_reciters', function (Blueprint $table) use ($columnsToRemove) {
-                    $table->dropColumn($columnsToRemove);
-                });
-            }
-        }
-
         // Drop from languages table
         if (Schema::hasTable('languages')) {
             $columns = Schema::getColumnListing('languages');
@@ -73,19 +62,6 @@ return new class extends Migration
                 }
                 if (! in_array('notes', $columns)) {
                     $table->json('notes')->nullable();
-                }
-            });
-        }
-
-        // Restore JSON columns for quran_reciters table
-        if (Schema::hasTable('quran_reciters')) {
-            $columns = Schema::getColumnListing('quran_reciters');
-            Schema::table('quran_reciters', function (Blueprint $table) use ($columns) {
-                if (! in_array('name', $columns)) {
-                    $table->json('name')->nullable();
-                }
-                if (! in_array('description', $columns)) {
-                    $table->json('description')->nullable();
                 }
             });
         }

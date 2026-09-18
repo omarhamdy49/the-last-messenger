@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Domain\Quran\Services;
 
 use App\Domain\Quran\Models\Playlist;
-use App\Domain\Quran\Models\ReciterProfile;
+use App\Domain\Quran\Models\QuranResource;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * The presentation shape shared by every playlist card (gallery, profile tab,
@@ -29,13 +30,22 @@ final class PlaylistCard
             'isPublic' => $playlist->is_public,
             'isFeatured' => $playlist->is_featured,
             'scope' => $playlist->scope,
-            'reciters' => $playlist->reciterProfiles()
-                ->map(fn (ReciterProfile $p) => [
-                    'name' => $p->displayName($locale),
-                    'image' => $p->profile_image_url,
-                    'url' => route('public.quran.reciter', $p->slug),
+            'reciters' => $playlist->reciters()
+                ->map(static fn (QuranResource $r): array => [
+                    'name' => $r->displayName($locale),
+                    'image' => self::imageUrl($r->image),
+                    'url' => route('public.quran.reciter', $r->slug),
                 ])
                 ->all(),
         ];
+    }
+
+    public static function imageUrl(?string $path): ?string
+    {
+        if ($path === null || $path === '') {
+            return null;
+        }
+
+        return str_starts_with($path, 'http') ? $path : Storage::disk('public')->url($path);
     }
 }

@@ -1,0 +1,70 @@
+{
+ "translations": [
+  {
+   "id": 85,
+   "name": "M.A.S. Abdel Haleem",
+   "author_name": "Abdul Haleem",
+   "slug": "en-haleem",
+   "language_name": "english",
+   "translated_name": {
+    "name": "M.A.S. Abdel Haleem",
+    "language_name": "english"
+   }
+  },
+  {
+   "id": 19,
+   "name": "M. Pickthall",
+   "author_name": "Mohammed Marmaduke William Pickthall",
+   "slug": "quran.en.pickthall",
+   "language_name": "english",
+   "translated_name": {
+    "name": "M. Pickthall",
+    "language_name": "english"
+   }
+  },
+  {
+   "id": 20,
+   "name": "Saheeh International",
+   "author_name": "Saheeh International",
+   "slug": "en-sahih-international",
+   "language_name": "english",
+   "translated_name": {
+    "name": "Saheeh International",
+    "language_name": "english"
+   }
+  },
+  {
+   "id": 97,
+   "name": "Tafheem e Qur'an - Syed Abul A'la Maududi",
+   "author_name": "Sayyid Abul Ala Maududi",
+   "slug": "ur-al-maududi",
+   "language_name": "urdu",
+   "translated_name": {
+    "name": "Tafheem e Qur'an - Syed Abul A'la Maududi",
+    "language_name": "english"
+   }
+  },
+  {
+   "id": 136,
+   "name": "Montada Islamic Foundation",
+   "author_name": "Montada Islamic Foundation",
+   "slug": "",
+   "language_name": "french",
+   "translated_name": {
+    "name": "Montada Islamic Foundation",
+    "language_name": "english"
+   }
+  },
+  {
+   "id": 77,
+   "name": "Turkish Translation (Diyanet)",
+   "author_name": "Diyanet Isleri",
+   "slug": "quran.tr.diyanet",
+   "language_name": "turkish",
+   "translated_name": {
+    "name": "Turkish Translation (Diyanet)",
+    "language_name": "english"
+   }
+  }
+ ]
+}

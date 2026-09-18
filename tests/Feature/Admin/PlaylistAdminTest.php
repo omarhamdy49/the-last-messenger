@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace Tests\Feature\Admin;
 
 use App\Domain\Quran\DTOs\PlaylistData;
+use App\Domain\Quran\Models\Chapter;
+use App\Domain\Quran\Models\ChapterAudioFile;
 use App\Domain\Quran\Models\Playlist;
-use App\Domain\Quran\Models\Recitation;
-use App\Domain\Quran\Models\Reciter;
-use App\Domain\Quran\Models\ReciterProfile;
-use App\Domain\Quran\Models\Surah;
+use App\Domain\Quran\Models\QuranResource;
 use App\Domain\Quran\Services\PlaylistService;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -104,14 +103,12 @@ final class PlaylistAdminTest extends TestCase
     public function test_admin_can_add_and_remove_surahs_and_rows_stay_in_surah_order(): void
     {
         foreach ([1, 2, 3] as $i) {
-            Surah::query()->forceCreate(['id' => $i, 'revelation_place' => 'makkah', 'revelation_order' => $i, 'bismillah_pre' => true, 'name_ar' => 'س'.$i, 'name_en' => 'S'.$i, 'transliteration' => 'S'.$i, 'verses_count' => 3]);
+            Chapter::factory()->number($i)->create(['name_arabic' => 'س'.$i, 'verses_count' => 3]);
         }
-        $profile = ReciterProfile::query()->create(['identity_key' => 't:a', 'slug' => 'a', 'is_active' => true]);
-        $profile->translations()->create(['locale' => 'ar', 'name' => 'قارئ أ']);
-        $recording = Reciter::query()->create(['slug' => 'a-rec', 'profile_id' => $profile->id, 'kind' => 'recitation', 'is_active' => true]);
-        $recording->translations()->create(['locale' => 'ar', 'name' => 'a', 'is_ready' => true]);
+        $recording = QuranResource::factory()->chapterReciter()->create(['slug' => 'a', 'name' => 'a', 'is_active' => true]);
+        $recording->syncTranslations(['name' => ['ar' => 'قارئ أ']]);
         foreach ([1, 3] as $surah) {
-            Recitation::query()->create(['reciter_id' => $recording->id, 'surah_id' => $surah, 'audio_url' => "https://cdn.test/{$surah}.mp3", 'format' => 'mp3']);
+            ChapterAudioFile::factory()->create(['resource_id' => $recording->id, 'chapter_id' => $surah, 'url' => "https://cdn.test/{$surah}.mp3"]);
         }
         $playlist = app(PlaylistService::class)->create(User::factory()->create()->id, new PlaylistData('x', null, 'custom', [1 => $recording->id, 2 => null], true));
         $admin = $this->createAdminUser();
@@ -125,7 +122,7 @@ final class PlaylistAdminTest extends TestCase
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('admin.playlists.edit', $playlist->id));
 
-        $this->assertSame([1 => $recording->id, 3 => $recording->id], $playlist->fresh()->items->pluck('reciter_id', 'surah_id')->all());
+        $this->assertSame([1 => $recording->id, 3 => $recording->id], $playlist->fresh()->items->pluck('resource_id', 'chapter_id')->all());
         $this->assertSame(2, $playlist->fresh()->items_count);
     }
 }

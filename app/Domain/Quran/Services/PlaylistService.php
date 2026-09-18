@@ -6,140 +6,125 @@ namespace App\Domain\Quran\Services;
 
 use App\Domain\Quran\DTOs\AssignmentResult;
 use App\Domain\Quran\DTOs\PlaylistData;
+use App\Domain\Quran\Enums\ResourceKind;
 use App\Domain\Quran\Models\Playlist;
 use App\Domain\Quran\Models\PlaylistItem;
-use App\Domain\Quran\Models\Recitation;
-use App\Domain\Quran\Models\ReciterProfile;
-use Illuminate\Database\Eloquent\Builder;
+use App\Domain\Quran\Repositories\AudioRepositoryInterface;
+use App\Domain\Quran\Repositories\ResourceRepositoryInterface;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Random\Randomizer;
 
+/**
+ * Visitor playlists: one chapter-reciter recording per chapter. A "reciter" in the
+ * wizard is a chapter-reciter resource; its "recording" is the same resource.
+ */
 final class PlaylistService
 {
     private readonly Randomizer $rng;
 
-    public function __construct(?Randomizer $rng = null)
-    {
+    public function __construct(
+        private readonly AudioRepositoryInterface $audio,
+        private readonly ResourceRepositoryInterface $resources,
+        ?Randomizer $rng = null,
+    ) {
         // Injectable so tests can seed it; production uses the secure default.
         $this->rng = $rng ?? new Randomizer;
     }
 
     /**
-     * Playable recitations for the given surahs, with the recording's person.
+     * Playable (chapter, reciter) pairs: an active chapter reciter with a file for the chapter.
      *
-     * @param  list<int>  $surahIds
-     * @return Collection<int, Recitation>
+     * @param  list<int>  $chapterIds
+     * @param  list<int>|null  $reciterIds
+     * @return Collection<int, object{resource_id: int, chapter_id: int, url: string, duration_ms: ?int, display_order: int}>
      */
-    private function playableFor(array $surahIds, ?callable $constrain = null): Collection
+    private function playableFor(array $chapterIds, ?array $reciterIds = null): Collection
     {
-        return Recitation::query()
-            ->playable()
-            ->whereIn('surah_id', $surahIds)
-            ->when($constrain, fn (Builder $q) => $constrain($q))
-            ->with('reciter:id,profile_id,display_order,style,riwayah,slug')
-            ->get(['id', 'reciter_id', 'surah_id']);
+        return $this->audio->playableChapterFiles($chapterIds, $reciterIds);
     }
 
     /**
-     * Give every surah in scope a recording from one of the chosen people.
+     * Give every chapter in scope a recording from one of the chosen reciters.
      *
-     * Balanced random: each surah goes to the person with the fewest surahs so
-     * far (ties broken at random), so three reciters over 114 surahs land near
-     * 38/38/38 instead of an arbitrary 60/40/14 while still feeling shuffled.
-     * A surah nobody covers is reported in `uncovered`, never silently dropped.
+     * Balanced random: each chapter goes to the reciter with the fewest chapters so
+     * far (ties broken at random), so three reciters over 114 chapters land near
+     * 38/38/38 while still feeling shuffled. A chapter nobody covers is reported in
+     * `uncovered`, never silently dropped.
      *
-     * @param  list<int>  $profileIds
-     * @param  list<int>  $surahIds
-     * @param  array<int, int>  $keep  surahId => recordingId the user pinned; wins if it still covers
+     * @param  list<int>  $reciterIds
+     * @param  list<int>  $chapterIds
+     * @param  array<int, int>  $keep  chapterId => reciterId the user pinned; wins if it still covers
      */
-    public function assign(array $profileIds, array $surahIds, array $keep = []): AssignmentResult
+    public function assign(array $reciterIds, array $chapterIds, array $keep = []): AssignmentResult
     {
-        $profileIds = array_values(array_unique(array_map('intval', $profileIds)));
-        $surahIds = array_values(array_unique(array_map('intval', $surahIds)));
-        sort($surahIds);
+        $reciterIds = array_values(array_unique(array_map('intval', $reciterIds)));
+        $chapterIds = array_values(array_unique(array_map('intval', $chapterIds)));
+        sort($chapterIds);
 
-        if ($profileIds === [] || $surahIds === []) {
-            return new AssignmentResult([], $surahIds, []);
+        if ($reciterIds === [] || $chapterIds === []) {
+            return new AssignmentResult([], $chapterIds, []);
         }
 
-        $recitations = $this->playableFor(
-            $surahIds,
-            fn (Builder $q) => $q->whereHas('reciter', fn (Builder $r) => $r->whereIn('profile_id', $profileIds)),
-        );
-
-        // surahId => profileId => list<recordingId>, recordings in display order.
+        // chapterId => reciterId => [reciterId] (the alternatives shape the wizard expects).
         $alternatives = [];
-        foreach ($recitations->sortBy([['reciter.display_order', 'asc'], ['reciter_id', 'asc']]) as $recitation) {
-            $bucket = &$alternatives[$recitation->surah_id][$recitation->reciter->profile_id];
-            $bucket ??= [];
-            if (! in_array($recitation->reciter_id, $bucket, true)) {
-                $bucket[] = $recitation->reciter_id;
-            }
-            unset($bucket);
+        foreach ($this->playableFor($chapterIds, $reciterIds) as $row) {
+            $alternatives[(int) $row->chapter_id][(int) $row->resource_id] = [(int) $row->resource_id];
         }
-
-        $defaults = ReciterProfile::query()->whereKey($profileIds)->pluck('default_recording_id', 'id');
 
         $items = [];
         $uncovered = [];
-        $load = array_fill_keys($profileIds, 0);
+        $load = array_fill_keys($reciterIds, 0);
 
-        foreach ($surahIds as $surah) {
-            $options = $alternatives[$surah] ?? [];
+        foreach ($chapterIds as $chapter) {
+            $options = $alternatives[$chapter] ?? [];
             if ($options === []) {
-                $uncovered[] = $surah;
+                $uncovered[] = $chapter;
 
                 continue;
             }
 
-            $pinned = isset($keep[$surah]) ? (int) $keep[$surah] : null;
-            if ($pinned !== null) {
-                foreach ($options as $profileId => $recordings) {
-                    if (in_array($pinned, $recordings, true)) {
-                        $items[$surah] = $pinned;
-                        $load[$profileId]++;
+            $pinned = isset($keep[$chapter]) ? (int) $keep[$chapter] : null;
+            if ($pinned !== null && isset($options[$pinned])) {
+                $items[$chapter] = $pinned;
+                $load[$pinned]++;
 
-                        continue 2;
-                    }
-                }
+                continue;
             }
 
             $candidates = array_keys($options);
-            $min = min(array_map(fn (int $p): int => $load[$p], $candidates));
-            $tied = array_values(array_filter($candidates, fn (int $p): bool => $load[$p] === $min));
-            $profileId = $tied[$this->rng->getInt(0, count($tied) - 1)];
+            $min = min(array_map(static fn (int $r): int => $load[$r], $candidates));
+            $tied = array_values(array_filter($candidates, static fn (int $r): bool => $load[$r] === $min));
+            $reciter = $tied[$this->rng->getInt(0, count($tied) - 1)];
 
-            $recordings = $options[$profileId];
-            $default = (int) ($defaults[$profileId] ?? 0);
-            $items[$surah] = in_array($default, $recordings, true) ? $default : $recordings[0];
-            $load[$profileId]++;
+            $items[$chapter] = $reciter;
+            $load[$reciter]++;
         }
 
         return new AssignmentResult($items, $uncovered, $alternatives);
     }
 
     /**
-     * (surah, recording) pairs with no playable audio. Empty means the payload is safe to store.
+     * (chapter, reciter) pairs with no playable audio. Empty means the payload is safe to store.
      *
      * @param  array<int, int|null>  $items
      * @return list<array{surah: int, recording: int}>
      */
     public function invalidPairs(array $items): array
     {
-        $pairs = array_filter($items, fn ($recording) => $recording !== null && $recording !== '');
+        $pairs = array_filter($items, static fn ($reciter) => $reciter !== null && $reciter !== '');
         if ($pairs === []) {
             return [];
         }
 
-        $valid = $this->playableFor(array_keys($pairs), fn (Builder $q) => $q->whereIn('reciter_id', array_values($pairs)))
-            ->map(fn (Recitation $r) => $r->surah_id.':'.$r->reciter_id)
+        $valid = $this->playableFor(array_map('intval', array_keys($pairs)), array_map('intval', array_values($pairs)))
+            ->map(static fn (object $r): string => $r->chapter_id.':'.$r->resource_id)
             ->flip();
 
         $bad = [];
-        foreach ($pairs as $surah => $recording) {
-            if (! isset($valid[$surah.':'.$recording])) {
-                $bad[] = ['surah' => (int) $surah, 'recording' => (int) $recording];
+        foreach ($pairs as $chapter => $reciter) {
+            if (! isset($valid[$chapter.':'.$reciter])) {
+                $bad[] = ['surah' => (int) $chapter, 'recording' => (int) $reciter];
             }
         }
 
@@ -180,15 +165,18 @@ final class PlaylistService
     /**
      * Replace all items atomically (caller holds the transaction): one delete, one bulk insert.
      *
-     * @param  array<int, int|null>  $items
+     * @param  array<int, int|null>  $items  chapter => reciter resource id
      */
     private function replaceItems(Playlist $playlist, array $items): void
     {
         ksort($items);
-        $rows = collect($items)->map(fn ($recording, int $surah): array => [
+        $now = now();
+        $rows = collect($items)->map(static fn ($reciter, int $chapter): array => [
             'playlist_id' => $playlist->id,
-            'surah_id' => $surah,
-            'reciter_id' => $recording !== null && $recording !== '' ? (int) $recording : null,
+            'chapter_id' => $chapter,
+            'resource_id' => $reciter !== null && $reciter !== '' ? (int) $reciter : null,
+            'created_at' => $now,
+            'updated_at' => $now,
         ])->values();
 
         $playlist->items()->delete();
@@ -212,68 +200,70 @@ final class PlaylistService
     }
 
     /**
-     * Every playable recording per surah, labelled for the admin editor.
+     * Every playable reciter per chapter, labelled for the admin editor.
      *
-     * @param  list<int>  $surahIds
+     * @param  list<int>  $chapterIds
      * @return array<int, list<array{id: int, label: string}>>
      */
-    public function coverage(array $surahIds): array
+    public function coverage(array $chapterIds): array
     {
-        if ($surahIds === []) {
+        if ($chapterIds === []) {
             return [];
         }
         $locale = app()->getLocale();
+        $names = $this->resources->active(ResourceKind::CHAPTER_RECITER)
+            ->mapWithKeys(static fn ($r): array => [$r->id => trim($r->displayName($locale).' · '.($r->style?->label($locale) ?? ''), ' ·')]);
 
-        return $this->playableFor($surahIds)
-            ->load('reciter.profile:id', 'reciter.profile.translations:id,profile_id,locale,name')
-            ->sortBy([['reciter.display_order', 'asc'], ['reciter_id', 'asc']])
-            ->unique(fn (Recitation $r) => $r->surah_id.':'.$r->reciter_id)
-            ->groupBy('surah_id')
-            ->map(fn (Collection $group) => $group->map(fn (Recitation $r) => [
-                'id' => $r->reciter_id,
-                'label' => ($r->reciter->profile?->displayName($locale) ?? $r->reciter->slug).' · '.$r->reciter->recordingLabel($locale),
+        return $this->playableFor(array_map('intval', $chapterIds))
+            ->groupBy('chapter_id')
+            ->map(static fn (Collection $group) => $group->map(static fn (object $r): array => [
+                'id' => (int) $r->resource_id,
+                'label' => (string) ($names[$r->resource_id] ?? $r->resource_id),
             ])->values()->all())
             ->all();
     }
 
     /**
-     * Player-ready rows for a loaded playlist. One recitation query for all
-     * items; per (recording, surah) the lowest-priority active source wins,
-     * same as the surah reader.
+     * The playable file URL for one (chapter, reciter), or null.
+     */
+    public function audioUrl(int $chapter, int $reciter): ?string
+    {
+        $row = $this->playableFor([$chapter], [$reciter])->first();
+
+        return $row === null ? null : AudioService::absolutize($row->url);
+    }
+
+    /**
+     * Player-ready rows for a loaded playlist (items with chapter + reciter loaded).
      *
      * @return list<array<string, mixed>>
      */
     public function tracks(Playlist $playlist, string $locale): array
     {
         $items = $playlist->items;
-        $assigned = $items->whereNotNull('reciter_id');
+        $assigned = $items->whereNotNull('resource_id');
 
-        $audio = $assigned->isEmpty() ? collect() : Recitation::query()
-            ->playable()
-            ->whereIn('surah_id', $assigned->pluck('surah_id'))
-            ->whereIn('reciter_id', $assigned->pluck('reciter_id'))
-            ->with('source:id,priority')
-            ->get(['id', 'reciter_id', 'source_id', 'surah_id', 'audio_url', 'duration_seconds'])
-            ->sortBy(fn (Recitation $r) => $r->source->priority)
-            ->unique(fn (Recitation $r) => $r->reciter_id.':'.$r->surah_id) // first = lowest priority
-            ->keyBy(fn (Recitation $r) => $r->reciter_id.':'.$r->surah_id);
+        $audio = $assigned->isEmpty() ? collect() : $this->playableFor(
+            $assigned->pluck('chapter_id')->map('intval')->unique()->values()->all(),
+            $assigned->pluck('resource_id')->map('intval')->unique()->values()->all(),
+        )->keyBy(static fn (object $r): string => $r->resource_id.':'.$r->chapter_id);
 
         return $items->map(function (PlaylistItem $item) use ($audio, $locale): array {
-            $recitation = $item->reciter_id ? $audio->get($item->reciter_id.':'.$item->surah_id) : null;
-            $profile = $item->reciter?->profile;
+            $file = $item->resource_id ? $audio->get($item->resource_id.':'.$item->chapter_id) : null;
+            $reciter = $item->reciter;
 
             return [
-                'surah' => $item->surah_id,
-                'surahName' => $item->surah?->getDisplayName($locale) ?? '',
-                'verses' => $item->surah?->verses_count,
-                'recording' => $item->reciter_id,
-                'reciterName' => $profile?->displayName($locale),
-                'reciterImage' => $profile?->profile_image_url,
-                'reciterUrl' => $profile ? route('public.quran.reciter', $profile->slug) : null,
-                'recordingLabel' => $item->reciter?->recordingLabel($locale),
-                'url' => $recitation?->audio_url,
-                'duration' => $recitation?->duration_seconds,
-                'readerUrl' => route('public.quran.surah', $item->surah_id).($item->reciter_id ? '?reciter='.$item->reciter_id : ''),
+                'surah' => $item->chapter_id,
+                'surahName' => $item->chapter?->displayName($locale) ?? '',
+                'verses' => $item->chapter?->verses_count,
+                'recording' => $item->resource_id,
+                'reciterName' => $reciter?->displayName($locale),
+                'reciterImage' => PlaylistCard::imageUrl($reciter?->image),
+                'reciterUrl' => $reciter ? route('public.quran.reciter', $reciter->slug) : null,
+                'recordingLabel' => $reciter?->style?->label($locale),
+                'url' => $file === null ? null : AudioService::absolutize($file->url),
+                'duration' => $file?->duration_ms === null ? null : intdiv((int) $file->duration_ms, 1000),
+                'readerUrl' => route('public.quran.surah', $item->chapter_id).($item->resource_id ? '?reciter='.$item->resource_id : ''),
             ];
         })->values()->all();
     }

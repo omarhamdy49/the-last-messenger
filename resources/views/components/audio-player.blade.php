@@ -11,9 +11,9 @@
                                               — the Quran surah reader: prev/next
                                                 navigate to the neighbouring
                                                 surah's PAGE, plus the reciter
-                                                picker, per-ayah highlighting from
-                                                the mp3quran timings, and the
-                                                verse-by-verse audio toggle
+                                                picker (the line under the track
+                                                title) and per-ayah highlighting
+                                                from the chapter's timings
     Prev/next resolve in that order (surah wins), and hide when neither applies —
     no dead controls.
 
@@ -52,7 +52,49 @@
                 </div>
                 <div class="min-w-0">
                     <p class="text-sm font-semibold truncate font-['Amiri'] text-gray-900 dark:text-white" x-text="$store.audioPlayer.track?.title"></p>
-                    <p class="text-[11px] truncate text-gray-500 dark:text-gray-400" x-text="$store.audioPlayer.track?.subtitle"></p>
+
+                    {{-- The reciter line IS the picker. It used to be a dead label here and
+                         a second button over on the right, which named the same reciter
+                         twice and cost the transport room it did not have. --}}
+                    <div class="relative" x-show="$store.audioPlayer.reciters.length > 0"
+                         @click.outside="$store.audioPlayer.reciterOpen = false">
+                        <button @click="$store.audioPlayer.reciterOpen = !$store.audioPlayer.reciterOpen"
+                                class="flex items-center gap-1 max-w-full rounded text-[11px] text-gray-500 dark:text-gray-400 hover:text-[#0056b3] dark:hover:text-[#64CCC5] transition-colors"
+                                title="{{ __('quran.public.choose_reciter') }}" aria-haspopup="listbox"
+                                :aria-expanded="$store.audioPlayer.reciterOpen">
+                            <span class="truncate" x-text="$store.audioPlayer.reciterName()"></span>
+                            <svg class="w-3 h-3 flex-shrink-0 transition-transform" :class="$store.audioPlayer.reciterOpen ? 'rotate-180' : ''"
+                                 fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        {{-- One tap, one list: every recording is a row, so choosing a
+                             reciter never means opening a select inside a popover. --}}
+                        <div x-show="$store.audioPlayer.reciterOpen" x-cloak x-transition.opacity
+                             class="absolute bottom-full start-0 mb-2 w-64 max-h-80 overflow-y-auto rounded-xl border shadow-2xl py-1 {{ $surface }} border-gray-200 dark:border-gray-700" role="listbox">
+                            <div class="sticky top-0 p-2 {{ $surface }}">
+                                    <input type="search" x-model="$store.audioPlayer.reciterQuery"
+                                           @click.stop @keydown.escape.stop="$store.audioPlayer.reciterOpen = false"
+                                           placeholder="{{ __('quran.public.reciter_search') }}"
+                                           aria-label="{{ __('quran.public.reciter_search') }}"
+                                           class="w-full rounded-lg border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-xs py-1.5">
+                                </div>
+                                <p x-show="$store.audioPlayer.filteredReciters().length === 0" x-cloak
+                                   class="px-3 py-3 text-xs text-gray-500 dark:text-gray-400">{{ __('site.no_results') }}</p>
+                                <template x-for="r in $store.audioPlayer.filteredReciters()" :key="r.id">
+                                    <button type="button" role="option" @click="$store.audioPlayer.selectReciter(r.id)"
+                                            :aria-selected="r.id === $store.audioPlayer.reciterId ? 'true' : 'false'"
+                                            class="w-full text-start px-3 py-2 text-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                                            :class="r.id === $store.audioPlayer.reciterId ? 'bg-gray-100 dark:bg-gray-800 font-bold' : ''">
+                                        <span class="block truncate" x-text="r.nameAr || r.nameEn"></span>
+                                        <span class="block truncate text-[11px] text-gray-500 dark:text-gray-400"
+                                              x-text="[r.recordingLabel, r.kindLabel].filter(Boolean).join(' · ')"></span>
+                                    </button>
+                                </template>
+                        </div>
+                    </div>
+
+                    {{-- Anything that is not a surah (a playlist track) keeps its own line. --}}
+                    <p x-show="$store.audioPlayer.reciters.length === 0" class="text-[11px] truncate text-gray-500 dark:text-gray-400"
+                       x-text="$store.audioPlayer.track?.subtitle"></p>
                 </div>
             </div>
 
@@ -124,16 +166,12 @@
                  overflowed onto the transport. The track title absorbs the
                  squeeze instead, which is what truncate is there for. --}}
             <div class="flex-1 min-w-fit flex items-center justify-end gap-1 sm:gap-2">
-                {{-- Verse-by-verse audio: plays the surah as chained per-verse files
-                     instead of the one whole-surah recording, so every ayah ends in a
-                     pause. It used to be the only way the page could know which ayah
-                     was being recited; mp3quran timings now do that on the single
-                     file, so this is a pacing choice (and still the only mode for the
-                     reciters with no timings). Offered wherever a verse queue is
-                     possible: a surah page, reciter with per-verse files. --}}
+{{-- Follow along: scroll the reader to the ayah being recited. The
+                     highlight follows the playhead either way; this only decides
+                     whether the page moves under the listener. --}}
                 {{-- ms-*: the options cluster butts up against the transport, and the
                      start side is the facing one in both LTR and RTL. --}}
-                <button x-show="$store.audioPlayer.surahMeta && $store.audioPlayer.currentReciter()?.verse_audio_template"
+                <button x-show="$store.audioPlayer.surahMeta"
                         @click="$store.audioPlayer.toggleFollow()"
                         class="{{ $iconBtnBase }} ms-2 sm:ms-3"
                         :class="$store.audioPlayer.follow
@@ -180,29 +218,6 @@
                     <input type="range" min="0" max="1" step="0.05" :value="$store.audioPlayer.volume"
                            @input="$store.audioPlayer.setVolume(parseFloat($event.target.value))"
                            class="w-16 lg:w-20 accent-[#0056b3] cursor-pointer" aria-label="{{ __('quran.public.volume') }}">
-                </div>
-
-                {{-- Reciter picker (only when reciters are configured) --}}
-                <div class="relative flex-shrink-0" x-show="$store.audioPlayer.reciters.length > 0" @click.outside="$store.audioPlayer.reciterOpen = false">
-                    <button @click="$store.audioPlayer.reciterOpen = !$store.audioPlayer.reciterOpen"
-                            class="flex items-center gap-1.5 px-2 sm:px-2.5 h-8 rounded-lg text-xs font-semibold transition-colors max-w-[8rem] sm:max-w-[10rem] text-gray-700 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800"
-                            title="{{ __('quran.public.choose_reciter') }}" aria-haspopup="listbox" :aria-expanded="$store.audioPlayer.reciterOpen">
-                        <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14a4 4 0 004-4V6a4 4 0 10-8 0v4a4 4 0 004 4zm6-4a6 6 0 01-12 0m6 6v3"/></svg>
-                        <span class="truncate hidden sm:inline" x-text="$store.audioPlayer.reciterName()"></span>
-                    </button>
-                    <div x-show="$store.audioPlayer.reciterOpen" x-cloak x-transition.opacity
-                         class="absolute bottom-full end-0 mb-2 w-56 max-h-72 overflow-y-auto rounded-xl border shadow-2xl py-1 {{ $surface }} border-gray-200 dark:border-gray-700" role="listbox">
-                        <label class="block p-2 text-sm">{{ __('quran.public.reciter') }}
-                            <select class="w-full rounded border-gray-300 dark:bg-gray-800" :value="$store.audioPlayer.currentReciter()?.profileId || $store.audioPlayer.reciterId" @change="$store.audioPlayer.selectPerson(Number($event.target.value))">
-                                <template x-for="person in $store.audioPlayer.personOptions()" :key="person.id"><option :value="person.id" x-text="person.name"></option></template>
-                            </select>
-                        </label>
-                        <label class="block p-2 text-sm" x-show="$store.audioPlayer.recordingOptions().length > 1">{{ __('quran.recordings.choose') }}
-                            <select class="w-full rounded border-gray-300 dark:bg-gray-800" :value="$store.audioPlayer.reciterId" @change="$store.audioPlayer.selectReciter(Number($event.target.value))">
-                                <template x-for="r in $store.audioPlayer.recordingOptions()" :key="r.id"><option :value="r.id" x-text="r.recordingLabel || r.nameAr || r.nameEn"></option></template>
-                            </select>
-                        </label>
-                    </div>
                 </div>
 
                 <button @click="$store.audioPlayer.close()" class="{{ $iconBtn }}"
@@ -265,25 +280,21 @@
             _surahNames: null,
 
             // Reciter switching (configured per surah page)
-            reciters: [],           // [{ id, nameAr, nameEn, surahAudioUrl, verse_audio_template }]
+            reciters: [],           // [{ id, nameAr, nameEn, surahAudioUrl, hasTimestamps }]
             reciterId: null,
             surahMeta: null,        // { nameAr, number, versesCount }
             surahUrlBase: null,     // e.g. https://site/quran/surah — enables surah transport
             reciterOpen: false,
-            // Follow-along: play the surah as chained per-verse files even when a
-            // whole-surah recording exists, so the page can highlight the ayah
-            // being recited. Off by default — the single file is gapless.
-            follow: localStorage.getItem('siteFollowVerses') === '1',
+            reciterQuery: '',       // filter box in the reciter list
+            // Follow-along: scroll the reader to the ayah being recited. Highlighting
+            // happens either way; this only decides whether the page moves under the
+            // listener. Default on — reading along with the recitation is what the
+            // reader is for, and now that it only moves the page (never the audio),
+            // there is nothing for it to interrupt. Switching it off is remembered.
+            follow: localStorage.getItem('siteFollowVerses') !== '0',
             // Auto-play the next surah/track when one ends. Default on; the
             // listener can switch it off from the player on any page.
             autoNext: localStorage.getItem('sitePlayerAutoNext') !== '0',
-
-            // Verse-chaining fallback. Only a fraction of reciters have a
-            // whole-surah recording; the rest play a surah by queueing their
-            // per-verse files. Non-null queue means we are in that mode.
-            queue: null,            // [url, ...] indexed by ayah - 1
-            queueIndex: 0,
-            _preload: null,
 
             // Per-ayah timings for the whole-surah recording of the selected
             // (surah, reciter): [[ayah, startMs, endMs], ...] ascending, with
@@ -338,8 +349,7 @@
                 this.reciters = Array.isArray(reciters) ? reciters : [];
                 this.surahMeta = surah || null;
                 this.surahUrlBase = urlBase || null;
-                // A queue belongs to the surah that built it, and so do timings.
-                this.queue = null; this.queueIndex = 0; this._preload = null;
+                // Timings belong to the surah that loaded them.
                 this.timings = null; this.ayahAtTime = null; this._timingsReq++;
                 // An active playlist survives opening the reader (e.g. "open in reader"
                 // from a playlist): it is only replaced once this page plays its own surah.
@@ -347,9 +357,14 @@
                 const valid = (id) => this.reciters.some((r) => r.id === id);
                 // `force` (a playlist hand-off via ?reciter=) wins over the stored
                 // choice for this page only; the stored preference is not touched.
+                // With nothing chosen yet, prefer a reciter that has the whole-surah
+                // recording: that is the one where "play from here" is a seek inside a
+                // single file, which is how the reader is meant to sound. A stored
+                // choice still wins — the listener's pick is not second-guessed.
+                const firstWhole = this.reciters.find((r) => r.surahAudioUrl) || this.reciters[0];
                 this.reciterId = (force && valid(reciterId)) ? reciterId
                     : (valid(stored) ? stored
-                        : (valid(reciterId) ? reciterId : (this.reciters[0]?.id ?? null)));
+                        : (valid(reciterId) ? reciterId : (firstWhole?.id ?? null)));
                 // init() may have restored a paused whole-surah track from a previous
                 // visit. Resuming it goes straight through toggle(), never through
                 // playSurah(), so this is the only place those timings get asked for.
@@ -365,7 +380,6 @@
                 this.playlist = list;
                 this.playlistIndex = Math.max(0, Math.min(startIndex, list.length - 1));
                 this.surahMeta = null; this.surahUrlBase = null;
-                this.queue = null; this.queueIndex = 0; this._preload = null;
                 if (this.track?.url === list[this.playlistIndex].url) { this.toggle(); return; }
                 this._playListed(true);
             },
@@ -393,17 +407,14 @@
                 if (autoplay) { this.audio.play().catch(() => {}); }
             },
 
-            personOptions() {
-                return [...new Map(this.reciters.map(r => [r.profileId || r.id, { id: r.profileId || r.id, name: r.profileName || r.nameAr || r.nameEn }])).values()];
-            },
-            recordingOptions() {
-                const current = this.currentReciter();
-                return this.reciters.filter(r => (r.profileId || r.id) === (current?.profileId || current?.id));
-            },
-            selectPerson(id) {
-                const choices = this.reciters.filter(r => (r.profileId || r.id) === id);
-                const chosen = choices.find(r => r.isDefault) || choices[0];
-                if (chosen) { this.selectReciter(chosen.id); }
+            // The catalogue runs to 33 recordings, so the list needs a filter. Matches
+            // either name and the style/kind line, case-insensitively.
+            filteredReciters() {
+                const q = this.reciterQuery.trim().toLowerCase();
+                if (!q) { return this.reciters; }
+
+                return this.reciters.filter((r) => [r.nameAr, r.nameEn, r.recordingLabel, r.kindLabel]
+                    .filter(Boolean).join(' ').toLowerCase().includes(q));
             },
             currentReciter() { return this.reciters.find((r) => r.id === this.reciterId) || null; },
             // What a reader-played track remembers about itself, so prev/next and
@@ -420,42 +431,15 @@
             reciterName() { const r = this.currentReciter(); return r ? (r.nameAr || r.nameEn || '') : ''; },
             surahUrl() { const r = this.currentReciter(); return r ? r.surahAudioUrl : null; },
 
-            // everyayah lays per-verse audio out as {folder}/{SSS}{AAA}.mp3.
-            _verseQueue(reciter) {
-                const surah = this.surahMeta;
-                if (!reciter?.verse_audio_template || !surah?.number || !surah?.versesCount) { return null; }
-                const s = String(surah.number).padStart(3, '0');
-                return Array.from({ length: surah.versesCount }, (_, i) =>
-                    reciter.verse_audio_template.replace('{surah}', s).replace('{ayah}', String(i + 1).padStart(3, '0')));
-            },
-
-            // Subtitle carries the ayah position, since in queue mode the progress
-            // bar only ever describes the current verse.
-            _subtitle() {
-                if (!this.queue) { return this.reciterName(); }
-                return `${this.reciterName()} · {{ __('quran.public.verse_label') }} ${this.queueIndex + 1}/${this.queue.length}`;
-            },
-
-            // The ayah being recited, 1-based. Three sources, in order:
-            //   queue mode          -> the queued ayah, known by construction
-            //   whole file + timings-> the playhead, resolved in _syncTimedAyah
-            //   neither             -> null
-            // null means "highlight nothing", and so does ayah 0 (the bismillah);
-            // syncPlayingVerse() on the surah page treats any falsy value that way.
-            get playingAyah() {
-                if (this.queue) { return this.queueIndex + 1; }
-
-                return this.ayahAtTime || null;
-            },
-
-            // Queue mode is forced by follow-along, and is the only option for a
-            // reciter with no whole-surah recording.
-            _preferQueue() { return this.follow && !!this.currentReciter()?.verse_audio_template; },
+            // The ayah being recited, 1-based, resolved from the playhead against the
+            // chapter's timings in _syncTimedAyah. null means "highlight nothing", and
+            // so does ayah 0 (the bismillah); syncPlayingVerse() on the surah page
+            // treats any falsy value that way.
+            get playingAyah() { return this.ayahAtTime || null; },
 
             // Load the whole-surah file and start at at(duration), once the
             // duration is actually known.
             _playWhole(url, at, autoplay) {
-                this.queue = null;
                 this.playlist = null; this.playlistIndex = 0;
                 this._teardown();
                 this.track = { url, title: this.surahMeta?.nameAr || this.track?.title || '', subtitle: this.reciterName(), surah: this._surahRef(), readerUrl: this._readerUrl() };
@@ -481,8 +465,8 @@
                 const token = ++this._timingsReq;
                 const surah = this.surahMeta?.number;
                 const id = this.reciterId;
-                // Timings describe mp3quran's own whole-surah audio. No recording,
-                // nothing to time — and the per-verse queue never needs them.
+                // Timings describe this reciter's whole-surah recording. No recording,
+                // nothing to time.
                 if (!surah || !id || !this.surahUrlBase || !this.surahUrl()) {
                     this.timings = null; this.ayahAtTime = null;
 
@@ -563,7 +547,7 @@
             // page; writing it four times a second would re-run all of that for
             // nothing, most of the time to the same value.
             _syncTimedAyah(seconds) {
-                const n = this.queue ? null : this._ayahAtMs(seconds * 1000);
+                const n = this._ayahAtMs(seconds * 1000);
                 if (n !== this.ayahAtTime) { this.ayahAtTime = n; }
             },
 
@@ -571,9 +555,9 @@
             // Recitation time tracks letters, not ayah count — ayah 282 of
             // al-Baqarah is not one 286th of the recording. This is the only way
             // to carry a listener's place between a whole-surah file (no verse
-            // timings anywhere in this project) and the per-verse queue, so it is
-            // an estimate; it always lands on an ayah boundary, so the error stops
-            // there instead of compounding.
+            // timings anywhere in this project), so it is an estimate; it always
+            // lands on an ayah boundary, so the error stops there instead of
+            // compounding.
             _ayahShares() {
                 const weights = this.surahMeta?.weights;
                 if (!Array.isArray(weights) || weights.length === 0) { return null; }
@@ -585,9 +569,7 @@
             },
             // Which ayah a fraction of the recording falls in, and where an ayah
             // starts. Real timings win wherever we have them; the letter estimate
-            // is only for the reciters mp3quran publishes none for. Ratios are
-            // taken against the timings' own total, not audio.duration — the file
-            // loaded at the moment of a mode switch is one ayah, not the surah.
+            // is only for the reciters mp3quran publishes none for.
             _ayahAt(ratio) {
                 const total = this._timingsTotalMs();
                 // Ayah 0 is the bismillah; resuming from it means resuming at ayah 1.
@@ -617,84 +599,47 @@
                 localStorage.setItem('sitePlayerAutoNext', this.autoNext ? '1' : '0');
             },
 
+            // Auto-scroll only: nothing about playback changes, so this never
+            // interrupts the recording.
             toggleFollow() {
                 this.follow = !this.follow;
                 localStorage.setItem('siteFollowVerses', this.follow ? '1' : '0');
-                if (!this.track || !this.surahMeta) { return; }
-
-                const wasPlaying = this.playing;
-
-                if (this.follow) {
-                    if (this.queue) { return; }   // already chaining verses
-                    const queue = this._verseQueue(this.currentReciter());
-                    if (!queue) { return; }       // no per-verse audio: nothing to switch to
-                    // Resume at the ayah the current offset falls in, from its start.
-                    const ratio = this.duration ? this.currentTime / this.duration : 0;
-                    this.queue = queue;
-                    this.queueIndex = Math.min((this._ayahAt(ratio) || 1) - 1, queue.length - 1);
-                    this._playQueued(wasPlaying);
-
-                    return;
-                }
-
-                const url = this.surahUrl();
-                if (!url || !this.queue) { return; }   // this reciter only has verses
-                const ratio = this._ratioAt(this.queueIndex + 1);
-                this._playWhole(url, (duration) => ratio * duration, wasPlaying);
             },
 
             // Play the configured surah with the selected reciter (rail Play button).
-            // Prefers the single whole-surah file, unless the reader is following
-            // along; falls back to chaining verses either way.
             playSurah(restart = false) {
-                const url = this._preferQueue() ? null : this.surahUrl();
-                if (url) {
-                    this.queue = null;
-                    this._loadTimings();
-                    if (restart && this.track?.url === url) { this.restart(); return; }
-                    this.play({ url, title: this.surahMeta?.nameAr || '', subtitle: this.reciterName(), surah: this._surahRef(), readerUrl: this._readerUrl() });
-                    return;
-                }
+                const url = this.surahUrl();
+                if (!url) { window.toast?.('{{ __('quran.public.audio_unavailable') }}', 'error'); return; }
 
-                const queue = this._verseQueue(this.currentReciter());
-                if (!queue) {
-                    // Follow-along asked for verses this reciter can't supply.
-                    const whole = this.surahUrl();
-                    if (whole) { this.queue = null; this.play({ url: whole, title: this.surahMeta?.nameAr || '', subtitle: this.reciterName(), surah: this._surahRef(), readerUrl: this._readerUrl() }); return; }
-                    window.toast?.('{{ __('quran.public.audio_unavailable') }}', 'error');
-
-                    return;
-                }
-
-                this.queue = queue;
-                this.queueIndex = 0;
-                this._playQueued(true);
+                this._loadTimings();
+                if (restart && this.track?.url === url) { this.restart(); return; }
+                this.play({ url, title: this.surahMeta?.nameAr || '', subtitle: this.reciterName(), surah: this._surahRef(), readerUrl: this._readerUrl() });
             },
 
             // Start the surah at one ayah — the per-verse play buttons in verse view
-            // and "listen from here" in reading view both land here. With timings the
-            // whole-surah recording can start mid-surah on its own, so seek and keep
-            // the single gapless file; only a reciter without them needs the queue.
+            // and "listen from here" in reading view both land here. It is always a
+            // seek inside the one gapless recording: with the chapter's timings the
+            // position is exact, and without them it is estimated, but the listener
+            // never gets a different file.
             playAyah(number) {
-                const whole = this._preferQueue() ? null : this.surahUrl();
-                if (!whole) { this._playAyahQueued(number); return; }
+                const whole = this.surahUrl();
+                if (!whole) { window.toast?.('{{ __('quran.public.audio_unavailable') }}', 'error'); return; }
 
                 // Returned so a caller can await the seek; nothing in the app does.
                 return this._loadTimings().then(() => {
                     const ms = this._ayahStartMs(number);
                     if (ms === null) {
-                        if (this._verseQueue(this.currentReciter())) { this._playAyahQueued(number); return; }
-                        // ponytail: no timings and no per-verse files — seek by the letter-share
-                        // estimate rather than refuse; exact once the recording gets real timings.
+                        // ponytail: no timings for this recording — seek by the letter-share
+                        // estimate rather than refuse; exact once it gets real timings.
                         const ratio = this._ratioAt(number);
                         this._playWhole(whole, (duration) => ratio * duration, true);
 
                         return;
                     }
 
-                    if (!this.queue && this.track?.url === whole && this.audio) {
-                        // Re-tapping the ayah already under the playhead toggles it,
-                        // same as the queue path — the card shows a pause icon.
+                    if (this.track?.url === whole && this.audio) {
+                        // Re-tapping the ayah already under the playhead toggles it:
+                        // the card shows a pause icon.
                         if (this.ayahAtTime === number) { this.toggle(); return; }
                         this.audio.currentTime = ms / 1000;
                         this.currentTime = ms / 1000;
@@ -708,56 +653,13 @@
                 });
             },
 
-            // Chained per-verse files: the only way to start mid-surah for a reciter
-            // with no timings, and what follow-along asks for explicitly.
-            _playAyahQueued(number) {
-                const queue = this.queue || this._verseQueue(this.currentReciter());
-                if (!queue) { window.toast?.('{{ __('quran.public.audio_unavailable') }}', 'error'); return; }
 
-                const idx = Math.max(0, Math.min(number - 1, queue.length - 1));
-                // Re-tapping the ayah that's already loaded toggles it.
-                if (this.queue && this.queueIndex === idx && this.track) { this.toggle(); return; }
-                this.queue = queue;
-                this.queueIndex = idx;
-                this._playQueued(true);
-            },
 
-            // Load the queued ayah. autoplay=false is used when only re-pointing
-            // the source (e.g. a reciter switch while paused).
-            _playQueued(autoplay) {
-                this.playlist = null; this.playlistIndex = 0;
-                this._teardown();
-                this.track = { url: this.queue[this.queueIndex], title: this.surahMeta?.nameAr || '', subtitle: this._subtitle(), surah: this._surahRef(), readerUrl: this._readerUrl() };
-                this.currentTime = 0; this.duration = 0;
-                this._ensureAudio();
-                this._persist();
-                if (autoplay) { this.audio.play().catch(() => {}); }
-                this._preloadNext();
-            },
-
-            // Warm the next ayah so the gap between verses stays short.
-            _preloadNext() {
-                const next = this.queue?.[this.queueIndex + 1];
-                if (!next) { this._preload = null; return; }
-                const a = new Audio();
-                a.preload = 'auto';
-                a.src = next;
-                this._preload = a;
-            },
-
-            // Advance within the queue. Returns false at the end of the surah.
-            _advance(autoplay = true) {
-                if (!this.queue || this.queueIndex >= this.queue.length - 1) { return false; }
-                this.queueIndex++;
-                this._playQueued(autoplay);
-                return true;
-            },
-
-            // Switch reciter and resume the same surah. In queue mode that means
-            // the same ayah — a wall-clock offset does not carry across reciters.
+            // Switch reciter and resume the same surah at the same ayah.
             selectReciter(id) {
                 this.reciterId = id;
                 this.reciterOpen = false;
+                this.reciterQuery = '';
                 localStorage.setItem('siteReciterId', String(id));
                 // Timings belong to one recording, so the switch invalidates them
                 // whether or not anything is playing right now.
@@ -765,20 +667,19 @@
                 if (!this.track) { return; }
 
                 const wasPlaying = this.playing;
-                const url = this._preferQueue() ? null : this.surahUrl();
+                const url = this.surahUrl();
+                if (!url) { window.toast?.('{{ __('quran.public.audio_unavailable') }}', 'error'); return; }
 
-                if (!url) {
-                    const queue = this._verseQueue(this.currentReciter());
-                    if (!queue) { window.toast?.('{{ __('quran.public.audio_unavailable') }}', 'error'); return; }
-                    // Keep the listener's place in the surah across the switch.
-                    this.queueIndex = Math.min(this.queue ? this.queueIndex : 0, queue.length - 1);
-                    this.queue = queue;
-                    this._playQueued(wasPlaying);
-                    return;
-                }
+                // Resume at the same AYAH, not the same wall-clock offset: two reciters
+                // read at different speeds, so 3:41 into one is a different verse in
+                // the other. Falls back to the offset only when timings are missing.
+                const ayah = this.ayahAtTime;
+                const offset = this.currentTime;
 
-                const resumeAt = this.queue ? 0 : this.currentTime;
-                this._playWhole(url, () => resumeAt, wasPlaying);
+                this._loadTimings().then(() => {
+                    const ms = ayah ? this._ayahStartMs(ayah) : null;
+                    this._playWhole(url, () => (ms === null ? offset : ms / 1000), wasPlaying);
+                });
             },
 
             // Play a standalone track ({url,title,subtitle}); re-clicking the same
@@ -799,30 +700,21 @@
                 if (this.playing) { this.audio.pause(); } else { this.audio.play().catch(() => {}); }
             },
 
-            // Skip by ±seconds. In queue mode a nudge past either edge of the
-            // current ayah steps to the neighbouring one, so the surah — not the
-            // single verse file — behaves like one continuous track.
+            // Skip by ±seconds within the recording.
             nudge(sec) {
                 if (!this.audio) { return; }
                 // Read the element, not the mirrored currentTime: `timeupdate`
                 // fires ~4x a second, so two quick taps off the mirror would both
                 // compute from the same stale base and land one step, not two.
                 const t = this.audio.currentTime + sec;
-                if (t < 0 && this.queue && this.queueIndex > 0) {
-                    this.queueIndex--;
-                    this._playQueued(this.playing);
-                    return;
-                }
                 const end = this.audio.duration || this.duration || 0;
-                if (end && t > end && this.queue && this._advance(this.playing)) { return; }
                 const at = Math.max(0, end ? Math.min(t, end) : Math.max(t, 0));
                 this.audio.currentTime = at;
                 this.currentTime = at;
             },
 
-            // Restart the surah from its very beginning (ayah 1 in queue mode).
+            // Restart the surah from its very beginning.
             restart() {
-                if (this.queue) { this.queueIndex = 0; this._playQueued(true); return; }
                 if (!this.audio) { return; }
                 this.audio.currentTime = 0;
                 this.currentTime = 0;
@@ -884,7 +776,6 @@
                 if (!url) { return this._playSurahInPlace(number + delta, reciterId, delta, skips + 1); }
 
                 const names = await this._loadSurahNames();
-                this.queue = null; this._preload = null;
                 this._teardown();
                 this.track = {
                     url,
@@ -970,7 +861,6 @@
             close() {
                 this._teardown();
                 this.track = null; this.playing = false; this.currentTime = 0; this.duration = 0;
-                this.queue = null; this.queueIndex = 0; this._preload = null;
                 this.playlist = null; this.playlistIndex = 0;
                 localStorage.removeItem('sitePlayerTrack');
                 localStorage.removeItem('sitePlayerPlaylist');
@@ -999,22 +889,17 @@
                 a.addEventListener('pause', () => { if (this.audio !== a) { return; } this.playing = false; this._persist(); });
                 a.addEventListener('ended', () => {
                     if (this.audio !== a) { return; }
-                    // In queue mode the surah continues into the next ayah. Then,
-                    // with auto-next on, a playlist rolls into its next track and a
+                    // With auto-next on, a playlist rolls into its next track and a
                     // surah page moves on to the next surah (the flag makes the next
                     // page resume with the same reciter).
-                    if (this._advance()) { return; }
                     if (this.autoNext && this.hasStepNav() && this.canStep(1)) { this.step(1); return; }
                     this.playing = false; this.currentTime = 0; this._persist();
                 });
-                // everyayah is missing the odd ayah file for some reciters; skip
-                // past it rather than stalling the surah on a dead request.
                 // The identity check matters: _teardown() clears src, which fires
-                // `error` on the element being discarded — without it, advancing
-                // one ayah tears down the old audio and cascades through the surah.
+                // `error` on the element being discarded.
                 a.addEventListener('error', () => {
                     if (this.audio !== a) { return; }
-                    if (!this._advance()) { this.playing = false; }
+                    this.playing = false;
                 });
                 this.audio = a;
             },

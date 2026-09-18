@@ -8,7 +8,6 @@ use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Media\Models\MediaEpisode;
 use App\Domain\Media\Models\MediaProgram;
 use App\Domain\People\Models\Muslim;
-use App\Domain\Quran\Models\Surah;
 use App\Domain\Quran\Models\Verse;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Shared\Enums\InteractionType;
@@ -37,8 +36,8 @@ class StoreInteractionRequest extends FormRequest
         'MediaEpisode' => MediaEpisode::class,
         'SeerahEvent' => SeerahEvent::class,
         'Sahabi' => Muslim::class,
+        // Chapters are not engageable content; only verses are (006).
         'QuranVerse' => Verse::class,
-        'QuranSurah' => Surah::class,
     ];
 
     /**

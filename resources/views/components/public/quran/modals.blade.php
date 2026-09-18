@@ -13,47 +13,122 @@
     - $defaultTranslationLang: string
 --}}
 
-@props(['surah', 'tafsirResources', 'translationResources' => [], 'defaultTranslationLang'])
+@props(['surah', 'chapterInfo' => null, 'tafsirResources', 'translationResources' => [], 'defaultTranslationLang'])
 
 {{-- ============================================================ --}}
-{{-- VERSE TAFSIR MODAL (reading view — tapping an ayah opens this)  --}}
+{{-- VERSE MODAL — translation, words and tafsir for one ayah       --}}
+{{--                                                                --}}
+{{-- Opened by tapping an ayah in reading view. Translation and the  --}}
+{{-- word list ship with the page, so only tafsir fetches, and only  --}}
+{{-- for the source the reader actually opens.                       --}}
 {{-- ============================================================ --}}
 <div x-show="tafsirVerse" x-cloak x-transition.opacity
      @keydown.escape.window="tafsirVerse = null"
      class="fixed inset-0 flex items-center justify-center p-4" style="z-index: 70;">
     <div class="absolute inset-0 bg-black/50" @click="tafsirVerse = null"></div>
-    <div class="relative w-full max-w-lg overflow-hidden rounded-2xl shadow-2xl flex flex-col"
-         style="max-height: 80vh;" :class="$store.theme.dark ? 'bg-gray-900' : 'bg-white'"
+    <div class="relative w-full max-w-4xl overflow-hidden rounded-2xl shadow-2xl flex flex-col"
+         style="max-height: 86vh;" :class="$store.theme.dark ? 'bg-gray-900' : 'bg-white'"
          role="dialog" aria-modal="true">
         <div class="p-5 bg-gradient-to-br from-[#0056b3] to-[#218838] text-white relative flex-shrink-0">
             <button @click="tafsirVerse = null" type="button" class="absolute top-3 end-3 p-1.5 rounded-full hover:bg-white/20 transition-colors" aria-label="{{ __('quran.public.close') }}">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
             <p class="text-xs text-white/80">{{ $surah['nameAr'] }} · <span x-text="tafsirVerse ? fmtNum(tafsirVerse.verse_key) : ''"></span></p>
-            <p class="font-['Amiri'] text-2xl leading-relaxed mt-2 pe-8" dir="rtl" x-text="tafsirVerse ? tafsirVerse.arabic : ''"></p>
+            {{-- Tajweed colouring when the reader has that script on (server-sanitised
+                 markup), plain text otherwise. --}}
+            <p x-show="tafsirVerse && tafsirVerse.tajweed" class="tajweed-text quran-text text-2xl leading-relaxed mt-2 pe-8" dir="rtl"
+               x-html="tafsirVerse ? tafsirVerse.tajweed : ''"></p>
+            <p x-show="!(tafsirVerse && tafsirVerse.tajweed)" class="quran-text text-2xl leading-relaxed mt-2 pe-8" dir="rtl"
+               x-text="tafsirVerse ? tafsirVerse.arabic : ''"></p>
+            <button type="button" @click="tafsirVerse && playVerse(tafsirVerse)"
+                    class="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-semibold hover:bg-white/25 transition-colors">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                {{ __('quran.public.listen') }}
+            </button>
         </div>
+
+        {{-- Section tabs --}}
+        <div class="flex gap-1 border-b px-3 pt-3 flex-shrink-0" role="tablist"
+             :class="$store.theme.dark ? 'border-gray-800' : 'border-gray-200'">
+            @foreach(['translation' => __('quran.public.translation'), 'words' => __('quran.public.word_by_word'), 'tafsir' => __('quran.public.tafsir')] as $tab => $label)
+                <button type="button" role="tab" @click="setVerseTab('{{ $tab }}')"
+                        :aria-selected="verseTab === '{{ $tab }}' ? 'true' : 'false'"
+                        class="rounded-t-lg px-4 py-2 text-sm font-semibold transition-colors"
+                        :class="verseTab === '{{ $tab }}'
+                            ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white'
+                            : ($store.theme.dark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900')">
+                    {{ $label }}
+                </button>
+            @endforeach
+        </div>
+
         <div class="p-5 overflow-y-auto">
-            {{-- Edition selector — same source list as the rail; text lazy-loads per verse/edition on change --}}
-            <template x-if="tafsirResources.length > 1">
-                <select x-model.number="selectedTafsirId" @change="setTafsirSource(selectedTafsirId)"
-                        class="mushaf-pop-select mb-2" aria-label="{{ __('quran.public.tafsir_source') }}">
-                    @foreach($tafsirResources as $tr)
-                    <option value="{{ $tr['id'] }}">{{ $tr['name'] }}</option>
-                    @endforeach
-                </select>
-            </template>
-            <p x-show="tafsirResources.length <= 1" class="mushaf-pop-title mb-2" x-text="currentTafsirName()"></p>
-            {{-- Loading --}}
-            <p x-show="tafsirVerse && tafsirLoadingVerse === tafsirVerse.id" class="text-sm animate-pulse"
-               :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">{{ __('quran.public.tafsir_loading') }}</p>
-            {{-- Text --}}
-            <p x-show="tafsirVerse && tafsirLoadingVerse !== tafsirVerse.id && currentTafsir(tafsirVerse)"
-               class="leading-relaxed font-['Amiri'] text-lg" dir="auto"
-               :class="$store.theme.dark ? 'text-gray-300' : 'text-gray-700'"
-               x-text="tafsirVerse ? currentTafsir(tafsirVerse) : ''"></p>
-            {{-- Loaded but this edition has no tafsir for the verse --}}
-            <p x-show="tafsirVerse && tafsirLoadingVerse !== tafsirVerse.id && tafsirLoaded(tafsirVerse) && !currentTafsir(tafsirVerse)"
-               class="text-sm italic" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">{{ __('quran.public.no_tafsir') }}</p>
+            {{-- Translation: already on the page, no fetch --}}
+            <div x-show="verseTab === 'translation'">
+                <p x-show="tafsirVerse && tafsirVerse.translation" class="leading-relaxed text-lg" dir="auto"
+                   :class="$store.theme.dark ? 'text-gray-200' : 'text-gray-800'"
+                   x-text="tafsirVerse ? tafsirVerse.translation : ''"></p>
+                <p x-show="tafsirVerse && tafsirVerse.transliteration" class="mt-3 text-sm italic" dir="ltr"
+                   :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'"
+                   x-text="tafsirVerse ? tafsirVerse.transliteration : ''"></p>
+                <p x-show="tafsirVerse && !tafsirVerse.translation" class="text-sm italic"
+                   :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">{{ __('quran.public.no_translation') }}</p>
+            </div>
+
+            {{-- Words: meaning, transliteration and the recorded word itself --}}
+            <div x-show="verseTab === 'words'">
+                <div x-show="tafsirVerse && wordsLoadingVerse === tafsirVerse.id" class="flex flex-wrap gap-2" aria-live="polite">
+                    <template x-for="i in 8" :key="i">
+                        <div class="h-14 w-20 animate-pulse rounded-xl" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-200'"></div>
+                    </template>
+                </div>
+                <div class="flex flex-wrap gap-2" x-show="!tafsirVerse || wordsLoadingVerse !== tafsirVerse.id">
+                <template x-for="(word, i) in wordsFor(tafsirVerse)" :key="i">
+                    <button type="button" @click="playWord(word)"
+                            class="rounded-xl border px-3 py-2 text-center transition-colors"
+                            :class="$store.theme.dark ? 'border-gray-700 hover:border-[#64CCC5] bg-gray-800/60' : 'border-gray-200 hover:border-[#218838] bg-gray-50'"
+                            :title="'{{ __('quran.public.play_word') }}'">
+                        <span class="block font-['Amiri'] text-xl" dir="rtl" x-text="word.text"></span>
+                        <span class="block text-[11px] mt-1" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-600'" x-text="word.translation || ''"></span>
+                        <span class="block text-[10px] italic" :class="$store.theme.dark ? 'text-gray-500' : 'text-gray-400'" x-text="word.transliteration || ''"></span>
+                    </button>
+                </template>
+                <p x-show="tafsirVerse && wordsLoadingVerse !== tafsirVerse.id && !wordsFor(tafsirVerse).length" class="text-sm italic"
+                   :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">{{ __('quran.public.no_words') }}</p>
+                </div>
+            </div>
+
+            {{-- Tafsir: the source strip is tabs, and each source loads on demand --}}
+            <div x-show="verseTab === 'tafsir'">
+                <div class="-mx-1 mb-3 flex gap-1 overflow-x-auto scrollbar-hide pb-1" role="tablist"
+                     aria-label="{{ __('quran.public.tafsir_source') }}">
+                    <template x-for="src in tafsirResources" :key="src.id">
+                        <button type="button" role="tab" @click="setTafsirSource(src.id)"
+                                :aria-selected="src.id === selectedTafsirId ? 'true' : 'false'"
+                                class="whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
+                                :class="src.id === selectedTafsirId
+                                    ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white'
+                                    : ($store.theme.dark ? 'bg-gray-800 text-gray-300 hover:text-white' : 'bg-gray-100 text-gray-600 hover:text-gray-900')"
+                                x-text="src.name"></button>
+                    </template>
+                </div>
+
+                {{-- Loading --}}
+                <div x-show="tafsirVerse && tafsirLoadingVerse === tafsirVerse.id" class="space-y-2" aria-live="polite">
+                    <p class="text-sm" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">{{ __('quran.public.tafsir_loading') }}</p>
+                    <div class="h-3 w-full animate-pulse rounded" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-200'"></div>
+                    <div class="h-3 w-5/6 animate-pulse rounded" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-200'"></div>
+                    <div class="h-3 w-4/6 animate-pulse rounded" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-200'"></div>
+                </div>
+                {{-- Text --}}
+                <p x-show="tafsirVerse && tafsirLoadingVerse !== tafsirVerse.id && currentTafsir(tafsirVerse)"
+                   class="leading-relaxed font-['Amiri'] text-lg" dir="auto"
+                   :class="$store.theme.dark ? 'text-gray-300' : 'text-gray-700'"
+                   x-text="tafsirVerse ? currentTafsir(tafsirVerse) : ''"></p>
+                {{-- Loaded, but this source has nothing for the verse --}}
+                <p x-show="tafsirVerse && tafsirLoadingVerse !== tafsirVerse.id && tafsirLoaded(tafsirVerse) && !currentTafsir(tafsirVerse)"
+                   class="text-sm italic" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">{{ __('quran.public.no_tafsir') }}</p>
+            </div>
         </div>
     </div>
 </div>
@@ -62,6 +137,7 @@
 {{-- SURAH INFO MODAL --}}
 {{-- ============================================================ --}}
 <div x-show="infoOpen" x-cloak x-transition.opacity
+     x-effect="infoOpen && loadChapterInfos()"
      @keydown.escape.window="infoOpen = false"
      class="fixed inset-0 flex items-center justify-center p-4" style="z-index: 70;">
     <div class="absolute inset-0 bg-black/50" @click="infoOpen = false"></div>
@@ -79,14 +155,51 @@
                 <span class="px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-semibold">{{ $surah['versesCount'] }} {{ __('quran.public.verse_count') }}</span>
                 <span class="px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-semibold">{{ __('quran.public.juz') }} {{ $surah['juz'] }}</span>
                 <span class="px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-semibold">{{ __('quran.public.revelation_order') }} {{ $surah['revelationOrder'] }}</span>
+                @if(! empty($surah['revelationPlaceName']))
+                    <span class="px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-semibold">{{ $surah['revelationPlaceName'] }}</span>
+                @endif
             </div>
         </div>
+        {{-- Language tabs: the site's own language first when it has an introduction.
+             The text itself is fetched when the modal opens, not with the page. --}}
+        <div x-show="(chapterInfos || []).length > 1" class="flex gap-1 border-b px-3 pt-3 flex-shrink-0" role="tablist"
+             :class="$store.theme.dark ? 'border-gray-800' : 'border-gray-200'">
+            <template x-for="info in (chapterInfos || [])" :key="info.language">
+                <button type="button" role="tab" @click="chapterInfoLang = info.language"
+                        :aria-selected="chapterInfoLang === info.language ? 'true' : 'false'"
+                        class="rounded-t-lg px-3 py-2 text-xs font-semibold uppercase transition-colors"
+                        :class="chapterInfoLang === info.language
+                            ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white'
+                            : ($store.theme.dark ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900')"
+                        x-text="info.language"></button>
+            </template>
+        </div>
+
         <div class="p-5 overflow-y-auto" :class="$store.theme.dark ? 'text-gray-200' : 'text-gray-700'">
-            @if(! empty($surah['info']))
-                <p class="leading-relaxed text-start" style="word-break: break-word;">{{ $surah['info'] }}</p>
-            @else
-                <p class="text-sm text-center py-6" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">{{ $surah['nameEn'] }} · {{ $surah['versesCount'] }} {{ __('quran.public.verse_count') }}</p>
-            @endif
+            {{-- Loading --}}
+            <div x-show="chapterInfoLoading" class="space-y-2" aria-live="polite">
+                <div class="h-3 w-full animate-pulse rounded" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-200'"></div>
+                <div class="h-3 w-11/12 animate-pulse rounded" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-200'"></div>
+                <div class="h-3 w-4/6 animate-pulse rounded" :class="$store.theme.dark ? 'bg-gray-800' : 'bg-gray-200'"></div>
+            </div>
+
+            {{-- The introduction in the chosen language --}}
+            <template x-if="!chapterInfoLoading && currentChapterInfo()">
+                <div>
+                    <p class="leading-relaxed text-start whitespace-pre-line" style="word-break: break-word;" dir="auto"
+                       x-text="currentChapterInfo().text"></p>
+                    <p x-show="currentChapterInfo().source || currentChapterInfo().resource" class="mt-4 text-xs"
+                       :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">
+                        {{ __('quran.public.source') }}: <span x-text="currentChapterInfo().source || currentChapterInfo().resource"></span>
+                    </p>
+                </div>
+            </template>
+
+            {{-- Nothing for this chapter in any language --}}
+            <p x-show="!chapterInfoLoading && chapterInfos !== null && !currentChapterInfo()"
+               class="text-sm text-center py-6" :class="$store.theme.dark ? 'text-gray-400' : 'text-gray-500'">
+                {{ $surah['nameEn'] }} · {{ $surah['versesCount'] }} {{ __('quran.public.verse_count') }}
+            </p>
         </div>
     </div>
 </div>

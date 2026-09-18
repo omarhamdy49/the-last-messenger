@@ -47,6 +47,32 @@
             transform: translateY(0);
         }
     }
+    /* Tajweed colouring (QF <tajweed class> markup, sanitised server-side). */
+    .tajweed-text tajweed.ham_wasl, .tajweed-text tajweed.laam_shamsiyah, .tajweed-text tajweed.slnt { color: #aaaaaa; }
+    .tajweed-text tajweed.madda_normal { color: #537fff; }
+    .tajweed-text tajweed.madda_permissible { color: #4050ff; }
+    .tajweed-text tajweed.madda_necessary { color: #000ebc; }
+    .tajweed-text tajweed.madda_obligatory { color: #2144c1; }
+    .tajweed-text tajweed.qalaqah { color: #dd0008; }
+    .tajweed-text tajweed.ikhafa_shafawi { color: #d500b7; }
+    .tajweed-text tajweed.ikhafa { color: #9400a8; }
+    .tajweed-text tajweed.idgham_shafawi { color: #58b800; }
+    .tajweed-text tajweed.iqlab { color: #26bffd; }
+    .tajweed-text tajweed.idgham_ghunnah { color: #169777; }
+    .tajweed-text tajweed.idgham_wo_ghunnah { color: #169200; }
+    .tajweed-text tajweed.idgham_mutajanisayn, .tajweed-text tajweed.idgham_mutaqaribayn { color: #a1a1a1; }
+    .tajweed-text tajweed.ghunnah { color: #ff7e1e; }
+    /* Word-by-word: each word is a focusable chip with its gloss underneath. */
+    .wbw-word { display: inline-flex; flex-direction: column; align-items: center; margin: 0 0.15em 0.6em; padding: 0.1em 0.25em; border-radius: 0.5rem; cursor: pointer; vertical-align: top; }
+    .wbw-word:hover, .wbw-word:focus-visible { background: rgba(100, 204, 197, 0.16); outline: none; }
+    .wbw-gloss { font-family: 'Cairo', sans-serif; font-size: 0.72rem; line-height: 1.3; direction: ltr; opacity: 0.8; max-width: 9rem; text-align: center; }
+
+    /* Mushaf glyph mode (QCF V2): each word shows its page-font glyph instead of Unicode. */
+    .mushaf .qw-glyph { display: none; }
+    .mushaf.glyph-mode .qw-uni, .mushaf.glyph-mode .ayah-end-num { display: none; }
+    .mushaf.glyph-mode .qw-glyph { display: inline; }
+    .mushaf.glyph-mode .ayah-end { background-image: none; width: auto; height: auto; }
+
     /* Brief highlight for a deep-linked verse (#v65). */
     .verse-target { animation: verseTargetPulse 2.4s ease-out 1; border-radius: 1rem; }
     @keyframes verseTargetPulse {
@@ -56,12 +82,68 @@
     }
     @media (prefers-reduced-motion: reduce) { .verse-target { animation: none; } }
 
+    /* The whole verse is tappable; which word was hit is worked out from the caret,
+       and the word that was hit is painted with the Custom Highlight API — no wrapper
+       element, so it works inside the tajweed markup too. */
+    .qw-tappable { cursor: pointer; }
+    ::highlight(quran-word) { background-color: rgba(33, 136, 56, 0.18); color: #17693a; }
+    .dark ::highlight(quran-word) { background-color: rgba(100, 204, 197, 0.22); color: #7ee7dd; }
+
+    /* The tajweed script carries its own ayah number as <span class=end>; give it the
+       same rosette the mushaf view draws instead of leaving a bare digit in the line. */
+    .tajweed-text span.end {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 2em;
+        height: 2em;
+        margin: 0 0.12em;
+        vertical-align: middle;
+        user-select: none;
+        font-family: 'Cairo', sans-serif;
+        font-size: 0.46em;
+        font-weight: 700;
+        line-height: 1;
+        color: #b08515;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cg fill='none' stroke='%23c9a227' stroke-width='1.1'%3E%3Ccircle cx='24' cy='24' r='15'/%3E%3Ccircle cx='24' cy='24' r='20' stroke-width='1' stroke-dasharray='0.6 2.6' stroke-linecap='round'/%3E%3C/g%3E%3C/svg%3E");
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+    .dark .tajweed-text span.end { color: #e7c66a; }
+
+    /* ---- Quran text fonts ----
+       IndoPak and the two Nastaleeq scripts carry their waqf marks in the Private
+       Use Area (U+E01E, U+F500, U+F501, U+F650 …), so a general Arabic face has no
+       glyph for them and the browser draws a tofu box. Only Quran Foundation's own
+       IndoPak Nastaleeq font has them, so the script picks the face. Both files are
+       local (quran:qf:download-assets --fonts=hafs,indopak); `swap` keeps the verse
+       readable in the fallback while the face loads. */
+    @font-face {
+        font-family: 'QuranHafs';
+        src: url('/fonts/quran/hafs/UthmanicHafs1Ver18.woff2') format('woff2');
+        font-display: swap;
+    }
+    @font-face {
+        font-family: 'QuranIndoPak';
+        src: url('/fonts/quran/indopak/indopak-nastaleeq-waqf-lazim-v4.2.1.woff2') format('woff2');
+        font-display: swap;
+    }
+    /* Every element that renders verse text reads this one variable, so the script
+       switcher only has to set it in one place. */
+    .quran-text, .mushaf { font-family: var(--quran-font, 'Amiri', serif); }
+    [data-quran-script='indopak'],
+    [data-quran-script='indopak_nastaleeq'],
+    [data-quran-script='qpc_nastaleeq'] { --quran-font: 'QuranIndoPak', 'Amiri', serif; }
+    /* Nastaleeq sits lower and needs the room, or the marks clip into the next line. */
+    [data-quran-script='indopak_nastaleeq'] .quran-text,
+    [data-quran-script='qpc_nastaleeq'] .quran-text { line-height: 2.4; }
+
     /* ---- Mushaf reading view (line-for-line, like a printed mushaf) ---- */
     /* Width cap lives here (not a Tailwind arbitrary class) so it works without a
        Vite rebuild and keeps lines narrow enough to fill via fit-to-width. */
     .mushaf-card { max-width: 40rem; }
     .mushaf {
-        font-family: 'Amiri', serif;
         -webkit-font-smoothing: antialiased;
         text-rendering: optimizeLegibility;
     }
@@ -384,9 +466,9 @@
     $tafsirResourcesJson = json_encode($tafsirResources, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
     $translationResourcesJson = json_encode($translationResources ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
     $isMakki = ($surah['type'] ?? '') === 'makki';
-    // Default reciter: Al-Husary (murattal); first in the list as fallback.
-    $defaultReciterId = collect($reciters)->firstWhere('slug', config('quran-audio.default_recording_slug'))['id']
-        ?? ($reciters[0]['id'] ?? 0);
+    $scriptsJson = json_encode($scripts ?? [], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG);
+    // Default reciter (the admin-marked default, else the first) comes from the controller.
+    $defaultReciterId = (int) ($defaultReciterId ?? 0);
 @endphp
 
 @section('content')
@@ -426,16 +508,33 @@
         switcherError: false,
         switcherSearch: '',
 
-        openTafsir: {},
         tafsirVerse: null,      // verse shown in the reading-mode tafsir modal (null = closed)
         verseMenu: null,        // verse tapped in reading mode (null = menu closed)
         verseMenuPos: { x: 0, y: 0 },
         tafsirResources: {{ $tafsirResourcesJson }},
-        selectedTafsirId: parseInt(localStorage.getItem('selectedTafsirId')) || ({{ $tafsirResources[0]['id'] ?? 0 }}),
+        // The reader's own pick wins; otherwise the edition the admin marked default
+        // (التفسير الميسر), and only then whatever sorts first.
+        selectedTafsirId: parseInt(localStorage.getItem('selectedTafsirId'))
+            || ({{ collect($tafsirResources)->firstWhere('is_default', true)['id'] ?? ($tafsirResources[0]['id'] ?? 0) }}),
+        verseTab: 'translation',   // which section of the verse modal is open
+        verseWords: {},            // verseId -> words, fetched when the tab is opened
+        wordsLoadingVerse: null,
+        chapterInfos: null,        // [{language, text, source, resource}] once fetched
+        chapterInfoLang: null,     // which language tab is showing
+        chapterInfoLoading: false,
         tafsirCache: {},        // resourceId -> { verseId: text } (filled per verse, on demand)
         tafsirLoadingVerse: null, // verse id currently being fetched
 
         translationResources: {{ $translationResourcesJson }},
+        scripts: {{ $scriptsJson }},
+        selectedScript: @js($selectedScript ?? 'uthmani'),
+        wordByWord: {{ ! empty($wordByWord) ? 'true' : 'false' }},
+        glyphMode: localStorage.getItem('quran:glyphs') === '1',
+        setGlyphMode(on) {
+            this.glyphMode = on;
+            try { localStorage.setItem('quran:glyphs', on ? '1' : '0'); } catch (e) {}
+            if (on && window.quranLoadGlyphFonts) { window.quranLoadGlyphFonts(); }
+        },
         selectedTranslationId: parseInt(localStorage.getItem('selectedTranslationId')) || {{ $defaultTranslationId }},
         translationCache: {},   // resourceId -> { verseId: text } (only languages/editions other than the inlined locale default)
 
@@ -455,7 +554,8 @@
             // Reset a stale tafsir selection (e.g. an edition that was removed) so a
             // persisted id never points at a missing resource.
             if (!this.tafsirResources.some(r => r.id === this.selectedTafsirId)) {
-                this.selectedTafsirId = this.tafsirResources.length ? this.tafsirResources[0].id : 0;
+                const fallback = this.tafsirResources.find(r => r.is_default) || this.tafsirResources[0];
+                this.selectedTafsirId = fallback ? fallback.id : 0;
                 localStorage.setItem('selectedTafsirId', this.selectedTafsirId);
             }
             // Nothing eager: tafsir loads per verse on open; the locale-default
@@ -491,6 +591,9 @@
                 sessionStorage.removeItem('siteAutoplaySurah');
                 this.$store.audioPlayer.playSurah();
             }
+
+            try { localStorage.setItem('quran:last', JSON.stringify({ number: this.surah.number, name: this.surah.nameAr })); } catch (e) {}
+            if (this.glyphMode) { this.$nextTick(() => window.quranLoadGlyphFonts && window.quranLoadGlyphFonts()); }
 
             // Deep link to a specific verse (#v65): the native jump fires before
             // Alpine renders the cards, so scroll after render + on later hash changes.
@@ -575,8 +678,9 @@
             return !!edition && (verse.id in edition);
         },
 
+        // Every active edition is selectable (any language); editions load lazily.
         get editionsForLang() {
-            return this.translationResources.filter(r => r.language === this.translationLang);
+            return this.translationResources;
         },
 
         defaultEditionIdFor(lang) {
@@ -595,9 +699,13 @@
             return groups;
         },
 
+        // Display mode describes a verse card. Reading view is one continuous
+        // mushaf page with no translation in it, so asking for a translation there
+        // used to change nothing at all — move to the view that can show it.
         setReadingMode(m) {
             this.readingMode = m;
             localStorage.setItem('readingMode', m);
+            if (m !== 'arabic' && this.viewMode === 'reading') { this.setViewMode('verses'); }
         },
 
         setViewMode(m) {
@@ -619,6 +727,10 @@
             this.selectedTranslationId = parseInt(id) || 0;
             localStorage.setItem('selectedTranslationId', this.selectedTranslationId);
             this.loadTranslation(this.selectedTranslationId);
+            // Picking a translation is a request to read it, and only the verse view
+            // shows one — with the display mode set so it is actually on screen.
+            if (this.viewMode === 'reading') { this.setViewMode('verses'); }
+            if (this.readingMode === 'arabic') { this.setReadingMode('both'); }
         },
 
         currentTranslationName() {
@@ -626,9 +738,152 @@
             return r ? r.name : '';
         },
 
-        toggleTafsir(verse) {
-            this.openTafsir[verse.id] = !this.openTafsir[verse.id];
-            if (this.openTafsir[verse.id]) { this.loadVerseTafsir(verse); } // fetch on open
+        // Switching to tafsir is what triggers its fetch: translation and words are
+        // already on the page, so nothing is requested until the reader asks for it.
+        setVerseTab(tab) {
+            this.verseTab = tab;
+            if (!this.tafsirVerse) { return; }
+            if (tab === 'tafsir') { this.loadVerseTafsir(this.tafsirVerse); }
+            if (tab === 'words') { this.loadVerseWords(this.tafsirVerse); }
+        },
+
+        // Words for one ayah. The reading view ships no word data, so the modal asks
+        // for it the first time the tab is opened and keeps it for the session.
+        async loadVerseWords(verse) {
+            if (this.verseWords[verse.id]) { return; }
+            this.wordsLoadingVerse = verse.id;
+            try {
+                const res = await fetch(`/quran/verse/${verse.id}/words`, { headers: { 'Accept': 'application/json' } });
+                if (res.ok) {
+                    const words = (await res.json()).words || [];
+                    this.verseWords = Object.assign({}, this.verseWords, { [verse.id]: words });
+                }
+            } catch (e) { /* leave it unset so a retry can refetch */ }
+            this.wordsLoadingVerse = null;
+        },
+
+        // Words already on the page (word-by-word mode) beat a second request.
+        wordsFor(verse) {
+            if (!verse) { return []; }
+
+            return (verse.words && verse.words.length) ? verse.words : (this.verseWords[verse.id] || []);
+        },
+
+        // Chapter introduction, in every language it exists in. Fetched once per page.
+        async loadChapterInfos() {
+            if (this.chapterInfos !== null || this.chapterInfoLoading) { return; }
+            this.chapterInfoLoading = true;
+            try {
+                const res = await fetch(`/quran/surah/${this.surah.number}/info`, { headers: { 'Accept': 'application/json' } });
+                if (res.ok) {
+                    this.chapterInfos = (await res.json()).infos || [];
+                    // Start on the site's language when it has an introduction, else the first.
+                    const here = document.documentElement.lang || 'ar';
+                    this.chapterInfoLang = (this.chapterInfos.find(i => i.language === here)
+                        || this.chapterInfos[0] || {}).language || null;
+                }
+            } catch (e) { this.chapterInfos = []; }
+            this.chapterInfoLoading = false;
+        },
+
+        currentChapterInfo() {
+            return (this.chapterInfos || []).find(i => i.language === this.chapterInfoLang) || null;
+        },
+
+        // Which word was tapped, worked out from where the caret lands rather than
+        // from a span around every word: al-Baqarah is ~6,600 words, and wrapping each
+        // one cost that many DOM nodes and Alpine effects. It also works on the tajweed
+        // script, whose markup wraps letters inside and across words, so no span-per-word
+        // split could survive it.
+        tapWordAt(event, verse) {
+            const root = event.currentTarget;
+            const caret = document.caretPositionFromPoint
+                ? document.caretPositionFromPoint(event.clientX, event.clientY)
+                : null;
+            const legacy = !caret && document.caretRangeFromPoint
+                ? document.caretRangeFromPoint(event.clientX, event.clientY)
+                : null;
+            const node = caret ? caret.offsetNode : (legacy ? legacy.startContainer : null);
+            const offset = caret ? caret.offset : (legacy ? legacy.startOffset : 0);
+            if (!node || !root.contains(node)) { return; }
+            // The ayah-number rosette sits in the same text flow; it is a marker, not a
+            // word, so a tap on it is not a tap on the word beside it.
+            const el = node.nodeType === 1 ? node : node.parentElement;
+            if (el && el.closest('span.end')) { return; }
+
+            // Where the caret landed, as an offset into the whole verse's text.
+            const head = document.createRange();
+            head.setStart(root, 0);
+            head.setEnd(node, offset);
+            const text = root.textContent || '';
+            let at = head.toString().length;
+
+            // Grow to the token around it. A tap in the gap between two words belongs
+            // to the one that follows it in reading order.
+            if (at >= text.length || /\s/.test(text[at] || '')) { at = Math.max(0, at - 1); }
+            let start = at, end = at;
+            while (start > 0 && !/\s/.test(text[start - 1])) { start--; }
+            while (end < text.length && !/\s/.test(text[end])) { end++; }
+            if (start === end) { return; }
+
+            this.highlightRange(root, start, end);
+
+            return this.tapWord(verse, text.slice(0, start).split(/\s+/).filter(Boolean).length);
+        },
+
+        // Paint the tapped word without wrapping it: the tajweed script's markup starts
+        // and ends inside words, so a wrapper element cannot always be inserted. The
+        // Custom Highlight API paints a Range instead, and is simply skipped where the
+        // browser has no support.
+        highlightRange(root, start, end) {
+            if (typeof Highlight === 'undefined' || !CSS.highlights) { return; }
+
+            const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+            const range = document.createRange();
+            let seen = 0, node;
+            while ((node = walker.nextNode())) {
+                const len = node.textContent.length;
+                if (seen <= start && start < seen + len) { range.setStart(node, start - seen); }
+                if (seen < end && end <= seen + len) { range.setEnd(node, end - seen); break; }
+                seen += len;
+            }
+            CSS.highlights.set('quran-word', new Highlight(range));
+        },
+
+        // The word behind the i-th whitespace token of the verse text. Not the i-th
+        // word: a corpus entry can hold more than one token (15:1's first word is the
+        // letters plus a pause mark, with a space between them), so counting tokens
+        // straight into the word list drifts by one from there on. Build the
+        // token-to-word map from the words themselves, and clamp, so a tap past the
+        // end of a short line still lands on its last word.
+        // NB: no double quotes anywhere in this attribute — it is the x-data value,
+        // and one quote ends it and takes the rest of the component with it.
+        wordAt(verse, index) {
+            const words = this.wordsFor(verse).filter((w) => w.type === 'word');
+            if (!words.length) { return null; }
+
+            const map = [];
+            words.forEach((w, i) => {
+                const tokens = String(w.text || '').split(/\s+/).filter(Boolean).length || 1;
+                for (let k = 0; k < tokens; k++) { map.push(i); }
+            });
+
+            return words[map[Math.min(Math.max(index, 0), map.length - 1)]] || null;
+        },
+
+        async tapWord(verse, index) {
+            await this.loadVerseWords(verse);
+            const word = this.wordAt(verse, index);
+            if (word) { this.playWord(word); }
+        },
+
+        // One word, read aloud. The URL is the per-word recording that came with the
+        // page, so this never waits on the reciter the player happens to be using.
+        playWord(word) {
+            if (!word?.audio_url) { return; }
+            this._wordAudio?.pause();
+            this._wordAudio = new Audio(word.audio_url);
+            this._wordAudio.play().catch(() => {});
         },
 
         // Reading (mushaf) view has no per-verse accordion, so tapping an ayah —
@@ -661,10 +916,13 @@
             this.$store.audioPlayer.playAyah(verse.number);
         },
 
-        showTafsirFor(verse) {
+        // The one way into the verse modal, from the card's icon and the reading
+        // view's menu alike. The tab does the fetching, so opening on `tafsir` loads
+        // the tafsir and opening on `translation` loads nothing.
+        openVerseModal(verse, tab = 'translation') {
             this.verseMenu = null;
             this.tafsirVerse = verse;
-            this.loadVerseTafsir(verse);
+            this.setVerseTab(tab);
         },
 
         currentTafsir(verse) {
@@ -680,8 +938,8 @@
         setTafsirSource(id) {
             this.selectedTafsirId = parseInt(id);
             localStorage.setItem('selectedTafsirId', this.selectedTafsirId);
-            // Re-fetch only the verses whose tafsir is currently open, for the new edition.
-            this.verses.forEach(v => { if (this.openTafsir[v.id]) { this.loadVerseTafsir(v); } });
+            // Only the open modal needs the new edition; everything else is fetched
+            // when it is next opened.
             if (this.tafsirVerse) { this.loadVerseTafsir(this.tafsirVerse); }
         },
 
@@ -705,6 +963,23 @@
             } catch (e) {
                 this.translationCache[id] = {};
             }
+        },
+
+        // Script and word-by-word change the server payload, so they reload the page
+        // with the choice in the query string (and remember it for the next surah).
+        reloadWith(key, value) {
+            const url = new URL(window.location.href);
+            if (value === null || value === '' || value === false) { url.searchParams.delete(key); } else { url.searchParams.set(key, value); }
+            try { localStorage.setItem('quran:' + key, value === null || value === false ? '' : String(value)); } catch (e) {}
+            window.location.href = url.toString();
+        },
+        setScript(value) { this.reloadWith('script', value === 'uthmani' ? null : value); },
+        toggleWordByWord() { this.reloadWith('wbw', this.wordByWord ? null : '1'); },
+
+        // Footnotes of the edition on screen, when that edition was inlined.
+        footNotes(verse) {
+            const row = (verse.translations || {})[this.selectedTranslationId];
+            return row && row.foot_notes ? Object.entries(row.foot_notes) : [];
         },
 
         copyVerse(verse) {
@@ -742,6 +1017,10 @@
                 el.classList.contains('ayah-end') ? 'ayah-end-playing' : 'qw-verse-playing'
             ));
 
+            // Scrolling is what the follow toggle controls: highlighting always
+            // happens, but only a reader who asked to be carried along gets moved.
+            if (!this.$store.audioPlayer.follow) { return; }
+
             const target = this.viewMode === 'verses' ? document.getElementById('v' + number) : parts[0];
             if (!target) { return; }
             // ponytail: scroll only when the ayah is off-screen; no tracking of
@@ -771,6 +1050,7 @@
         }
     }"
     x-init="boot()"
+    :data-quran-script="selectedScript"
     :class="$store.theme.dark ? 'bg-gray-950' : 'bg-gray-50'"
     class="min-h-dvh font-['Cairo'] transition-colors duration-300"
 >
@@ -847,7 +1127,7 @@
         <svg class="w-4 h-4 flex-shrink-0 text-[#218838]" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.84A1 1 0 004 3.7v12.6a1 1 0 001.5.86l11-6.3a1 1 0 000-1.72l-11-6.3z"/></svg>
         {{ __('quran.public.listen_from_here') }}
     </button>
-    <button type="button" role="menuitem" @click="showTafsirFor(verseMenu)"
+    <button type="button" role="menuitem" @click="openVerseModal(verseMenu, 'tafsir')"
             class="w-full text-start px-3 py-2.5 text-sm font-medium flex items-center gap-2.5 transition-colors"
             :class="$store.theme.dark ? 'text-gray-200 hover:bg-gray-800' : 'text-gray-700 hover:bg-gray-100'">
         <svg class="w-4 h-4 flex-shrink-0 text-[#0056b3]" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.5S10 5 7 5H4v12h3c3 0 5 1.5 5 1.5m0-12S14 5 17 5h3v12h-3c-3 0-5 1.5-5 1.5m0-12v12"/></svg>
@@ -858,7 +1138,7 @@
 {{-- ============================================================ --}}
 {{-- MODALS (Tafsir, Info, Switcher) --}}
 {{-- ============================================================ --}}
-<x-public.quran.modals :surah="$surah" :tafsirResources="$tafsirResources" :translationResources="$translationResources" :defaultTranslationLang="$defaultTranslationLang" />
+<x-public.quran.modals :surah="$surah" :chapterInfo="$chapterInfo ?? null" :tafsirResources="$tafsirResources" :translationResources="$translationResources" :defaultTranslationLang="$defaultTranslationLang" />
 
 </div>{{-- /x-data --}}
 

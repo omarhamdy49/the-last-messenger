@@ -24,8 +24,8 @@ use Illuminate\Support\Facades\Schema;
  *                                        MediaProgramRepository::getRecent() orders by
  *                                        created_at — the wrong column for that index, and
  *                                        getRecent() is the one row-builder with no cache.
- *   quran_verse_tafsirs FULLTEXT(text)    TafseerRepository searched a longText column with
- *                                        `LIKE '%…%'` and nothing to fall back on.
+ *   quran_verse_tafsirs FULLTEXT(text)    removed by 006-quran-qf-refactor; quran_tafsirs
+ *                                        (2026_09_18_000006) declares its own FULLTEXT.
  *   search_history(query(64))             Prefix index — `query` is too long to index whole.
  *   user_interactions(interaction_type, created_at)
  *                                        Analytics filter by type over a window.
@@ -76,16 +76,6 @@ return new class extends Migration
             );
         }
 
-        // Fulltext index is MySQL-specific - SQLite doesn't support it
-        if (Schema::getConnection()->getDriverName() === 'mysql'
-            && Schema::hasTable('quran_verse_tafsirs')
-            && Schema::hasColumn('quran_verse_tafsirs', 'text')
-            && ! $this->indexExists('quran_verse_tafsirs', 'quran_verse_tafsirs_text_fulltext')) {
-            Schema::table('quran_verse_tafsirs', function (Blueprint $table): void {
-                $table->fullText('text', 'quran_verse_tafsirs_text_fulltext');
-            });
-        }
-
         foreach ($this->redundant as $index) {
             $this->dropIndex($index['table'], $index['name']);
         }
@@ -98,7 +88,6 @@ return new class extends Migration
         }
 
         $this->dropIndex('search_history', 'search_history_query_prefix_index');
-        $this->dropIndex('quran_verse_tafsirs', 'quran_verse_tafsirs_text_fulltext');
 
         // Recreate the duplicates dropped in up(), so this migration is reversible even
         // though restoring them is a pessimisation.

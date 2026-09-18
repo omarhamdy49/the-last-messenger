@@ -11,7 +11,7 @@ use App\Domain\Media\Models\MediaProgram;
 use App\Domain\Media\Services\LiveChannelService;
 use App\Domain\Media\Services\MediaEpisodeService;
 use App\Domain\Media\Services\MediaProgramService;
-use App\Domain\Quran\Models\Reciter;
+use App\Domain\Quran\Services\PublicReciterService;
 use App\Domain\Shared\Enums\FavorableType;
 use App\Domain\Shared\Services\FavoriteService;
 use App\Domain\Shared\Services\InteractionService;
@@ -91,29 +91,18 @@ final class MediaController extends Controller
                 ->map(fn (LiveChannel $channel): array => $this->mapLiveCard($channel))
                 ->values()->all();
 
-            // Featured Quran reciters teaser row (cross-section discovery).
-            // Portrait-first so the visible row isn't a wall of initial-letter
-            // fallbacks; unique() folds catalogue aliases of the same person.
+            // Featured Quran reciters teaser row (cross-section discovery). The
+            // reciter catalogue is one Quran resource table now, so the directory
+            // service owns the picking and this only reshapes its cards.
             $locale = app()->getLocale();
-            $reciters = Reciter::query()->active()->recitationsOnly()->featured()
-                ->with('translations:id,reciter_id,locale,name')
-                ->orderByRaw('(profile_image IS NULL)')
-                // ponytail: alias-folding by translated name (with locale
-                // fallback) can't move into SQL cheaply, so it stays in PHP —
-                // but bound the fetch instead of hydrating every featured row.
-                // 30 leaves 3x headroom over the 10-unique cap for a curated
-                // teaser set; raise it if featured reciters ever grows large.
-                ->latest()->limit(30)->get()
-                ->unique(fn (Reciter $reciter): string => $reciter->getDisplayName($locale))
-                ->take(10)
-                ->map(fn (Reciter $reciter): array => [
-                    'name' => $reciter->getDisplayName($locale),
-                    'style' => $reciter->style,
-                    'image' => $reciter->profile_image_url,
-                    'country_flag' => country_flag($reciter->country),
-                    'country_name' => country_name($reciter->country, $locale),
-                    'url' => route('public.quran.reciter', $reciter->slug),
-                ])->values()->all();
+            $reciters = array_map(static fn (array $card): array => [
+                'name' => $locale === 'ar' ? $card['nameAr'] : ($card['nameEn'] ?: $card['nameAr']),
+                'style' => $card['styleLabel'],
+                'image' => $card['profileImage'],
+                'country_flag' => $card['countryFlag'],
+                'country_name' => $card['countryName'],
+                'url' => route('public.quran.reciter', $card['slug']),
+            ], app(PublicReciterService::class)->listing($locale)['featured']);
 
             // Only categories flagged is_featured (admin-managed) load on the list.
             $featuredCategoryKeys = $this->programService->getFeaturedCategoryKeys();

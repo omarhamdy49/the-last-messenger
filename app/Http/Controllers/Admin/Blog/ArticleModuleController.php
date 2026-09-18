@@ -8,8 +8,11 @@ use App\Domain\Hadith\Models\Hadith;
 use App\Domain\Hadith\Models\HadithCollection;
 use App\Domain\Media\Models\MediaEpisode;
 use App\Domain\Media\Models\MediaProgram;
-use App\Domain\Quran\Models\Surah;
-use App\Domain\Quran\Models\Verse;
+use App\Domain\Quran\DTOs\ReaderOptions;
+use App\Domain\Quran\Enums\ResourceKind;
+use App\Domain\Quran\Repositories\ChapterRepositoryInterface;
+use App\Domain\Quran\Repositories\ResourceRepositoryInterface;
+use App\Domain\Quran\Repositories\VerseRepositoryInterface;
 use App\Http\Controllers\Controller;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -108,45 +111,61 @@ final class ArticleModuleController extends Controller
         return null;
     }
 
-    public function surahs(): JsonResponse
+    /**
+     * Chapter picker for the verse embed. The wire keys (`name_ar`, `name_en`,
+     * `revelation_order`) are what the Quill blot already reads, so they stay even
+     * though the columns behind them are now `name_arabic` / `name_simple`.
+     */
+    public function surahs(ChapterRepositoryInterface $chapters): JsonResponse
     {
         return response()->json([
-            'data' => Surah::query()
-                ->orderBy('id')
-                ->get(['id', 'revelation_order', 'name_ar', 'name_en', 'verses_count']),
+            'data' => $chapters->all(publishedOnly: false)->map(fn ($chapter): array => [
+                'id' => $chapter->id,
+                'revelation_order' => $chapter->revelation_order,
+                'name_ar' => $chapter->name_arabic,
+                'name_en' => $chapter->name_simple,
+                'verses_count' => $chapter->verses_count,
+            ])->values(),
         ]);
     }
 
-    public function verses(Request $request, Surah $surah): JsonResponse
-    {
+    public function verses(
+        Request $request,
+        int $surah,
+        VerseRepositoryInterface $verses,
+        ResourceRepositoryInterface $resources,
+    ): JsonResponse {
         $locale = $this->contentLocale($request);
-        $translationLocales = array_values(array_unique([$locale, 'en', 'ar']));
+        $preferred = array_values(array_unique([$locale, 'en', 'ar']));
 
-        $verses = Verse::query()
-            ->where('surah_id', $surah->id)
-            ->with(['translations' => fn ($query) => $query
-                ->whereIn('lang', $translationLocales)
-                ->orderBy('resource_id')])
-            ->orderBy('verse_number')
-            ->get(['id', 'surah_id', 'verse_number', 'verse_key'])
-            ->map(function (Verse $verse) use ($locale, $translationLocales): array {
-                $translations = $verse->translations
-                    ->groupBy('lang')
-                    ->map(fn ($items) => $items->first()?->text ?? '');
-                $resolvedLocale = collect($translationLocales)
-                    ->first(fn (string $candidate): bool => filled($translations->get($candidate)));
+        // Translations hang off a resource, and a resource has one language, so the
+        // picker offers the best-matching active translation per language.
+        $editions = $resources->active(ResourceKind::TRANSLATION)
+            ->filter(fn ($resource): bool => in_array((string) $resource->language_iso, $preferred, true))
+            ->groupBy(fn ($resource): string => (string) $resource->language_iso)
+            ->map(fn ($group) => $group->first()->id);
+
+        $rows = $verses->byChapter($surah);
+        $payload = $editions->isEmpty()
+            ? []
+            : $verses->payload($rows->pluck('id')->all(), new ReaderOptions(translationIds: $editions->values()->all()));
+
+        return response()->json([
+            'data' => $rows->map(function ($verse) use ($locale, $preferred, $editions, $payload): array {
+                $texts = $payload[$verse->id]['translations'] ?? [];
+                $language = collect($preferred)->first(
+                    fn (string $candidate): bool => filled($texts[$editions->get($candidate)]['text'] ?? null)
+                );
 
                 return [
                     'id' => $verse->id,
                     'verse_number' => $verse->verse_number,
                     'verse_key' => $verse->verse_key,
-                    'text' => $resolvedLocale ? $translations->get($resolvedLocale, '') : '',
-                    'text_locale' => $resolvedLocale ?? $locale,
+                    'text' => $language !== null ? (string) $texts[$editions->get($language)]['text'] : '',
+                    'text_locale' => $language ?? $locale,
                 ];
-            })
-            ->values();
-
-        return response()->json(['data' => $verses]);
+            })->values(),
+        ]);
     }
 
     public function hadithCollections(): JsonResponse

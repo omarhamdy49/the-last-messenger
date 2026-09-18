@@ -243,7 +243,7 @@ class InteractionController extends Controller
                 ->whereHas('program', fn ($program) => $program->published()),
             'SeerahEvent' => $query->published(),
             'Sahabi' => $query->published(),
-            'QuranVerse', 'QuranSurah' => null,
+            'QuranVerse' => $query->whereHas('chapter', fn ($chapter) => $chapter->published()),
         };
 
         return $query->findOrFail($id);
