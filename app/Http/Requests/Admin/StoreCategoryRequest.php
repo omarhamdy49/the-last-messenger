@@ -79,8 +79,8 @@ class StoreCategoryRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.ar.required' => 'Arabic name is required',
-            'name.en.required' => 'English name is required',
+            'name.ar.required' => __('admin.category_name_ar_required'),
+            'name.en.required' => __('admin.category_name_en_required'),
             'name.ar.max' => 'Arabic name cannot exceed 255 characters',
             'name.en.max' => 'English name cannot exceed 255 characters',
             'slug.regex' => 'Slug can only contain lowercase letters, numbers, and hyphens',

@@ -17,7 +17,7 @@
     values: {{ json_encode($values) }},
     minItems: {{ $minItems }},
     maxItems: {{ $maxItems }}
-})" class="repeatable-field">
+})" x-init="$watch('items', () => $dispatch('wizard:dirty'))" class="repeatable-field">
 
     <!-- Label & Help -->
     @if($label)

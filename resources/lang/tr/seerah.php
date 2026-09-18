@@ -3,7 +3,66 @@
 declare(strict_types=1);
 
 return [
+    'admin' => [
+        'tab_links' => 'Bağlantılar',
+        'form_sections' => 'Form bölümleri',
+        'tab_has_errors' => 'Bu sekmede hatalar var',
+        'fix_errors' => 'Lütfen sekmelerde işaretlenen alanları düzeltin.',
+        'related_content' => 'İlgili içerik',
+        'related_content_help' => 'Olayı ilgili ayetlere, hadislere, sahabelere ve makalelere bağlayın; olay sayfasında görünürler.',
+        'link_verses' => 'Ayetler',
+        'link_hadiths' => 'Hadisler',
+        'link_companions' => 'Sahabeler ve şahsiyetler',
+        'link_articles' => 'Makaleler',
+        'add_link' => 'Ekle',
+        'search_articles' => 'Makale ara…',
+        'no_links' => 'Henüz bağlantı yok.',
+        'no_options' => 'Seçenek yok.',
+        'quick_create' => 'Oluştur',
+        'quick_name_ar' => 'Arapça ad',
+        'quick_name_en' => 'İngilizce ad',
+        'quick_name_required' => 'Önce Arapça adı girin',
+        'quick_create_failed' => 'Oluşturulamadı, lütfen tekrar deneyin',
+        'external_links' => 'Dış bağlantılar',
+        'external_links_help' => 'Her dil için çevrimiçi kaynaklara, haritalara veya referanslara bağlantılar.',
+        'link_title' => 'Bağlantı başlığı',
+    ],
+
     'public' => [
+
+        'view_label' => 'Görünüm',
+
+        'view_timeline' => 'Zaman çizelgesi',
+
+        'view_grid' => 'Kartlar',
+
+        'save_event' => 'Olayı kaydet',
+
+        'unsave_event' => 'Kaydedilenlerden çıkar',
+
+        'copy_link' => 'Bağlantıyı kopyala',
+
+        'share_whatsapp' => 'WhatsApp',
+
+        'share_x' => 'X',
+
+        'share_facebook' => 'Facebook',
+
+        'reading_time' => ':minutes dk okuma',
+
+        'events_in_year' => ':count olay',
+
+        'year_heading' => ':year yılı',
+
+        'open_event' => 'Olayı aç',
+
+        'back_to_events' => 'Tüm olaylar',
+
+        'save_failed' => 'Kaydedilemedi, tekrar deneyin',
+
+        'chapter' => ':number',
+
+        'reading_tools' => 'Okuma araçları',
         'page_title' => 'Peygamber Siyeri',
         'page_description' => 'Peygamberlerin Sonuncusu ﷺ’in hayatına, siyerin önemli dönüm noktalarını belgeleyen etkileşimli bir zaman çizelgesiyle yolculuk.',
         'hero_badge' => 'Etkileşimli Zaman Çizelgesi',
@@ -36,6 +95,14 @@ return [
         'section_sources' => 'Kaynaklar ve Referanslar',
         'section_more_details' => 'Ek ayrıntılar',
         'section_media' => 'Medya',
+        'section_episodes' => 'Video bölümleri',
+        'section_linked' => 'İlgili içerik',
+        'linked_verses' => 'İlgili ayetler',
+        'linked_hadiths' => 'İlgili hadisler',
+        'linked_companions' => 'İlgili şahsiyetler',
+        'linked_articles' => 'İlgili makaleler',
+        'section_external_links' => 'Dış bağlantılar',
+        'tags_label' => 'Etiketler ve kategoriler',
         'on_this_page' => 'Bu Sayfada',
         'related_events' => 'İlgili Olaylar',
         'share' => 'Paylaş',

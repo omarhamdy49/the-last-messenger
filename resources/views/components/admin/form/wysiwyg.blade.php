@@ -75,8 +75,10 @@
                  toolbar: @js($toolbar),
              });
 
-             const sync = () => {
+             const sync = (delta, oldDelta, source) => {
                  input.value = this.isEmpty() ? '' : this.editor.root.innerHTML;
+                 // Tell an enclosing form wizard about real edits (not the initial load).
+                 if (source === 'user') { input.dispatchEvent(new CustomEvent('wizard:dirty', { bubbles: true })); }
              };
              this.editor.on('text-change', sync);
              this.sync = sync;
@@ -98,7 +100,7 @@
              window.AdminWysiwygModules.insert(
                  this.editor, this.modules.takeRange(), detail.moduleType, detail.data, @js($direction === 'rtl' ? 'ar' : 'en')
              );
-             this.sync && this.sync();
+             this.sync && this.sync(null, null, 'user');
              this.editor.focus();
          },
          init() {

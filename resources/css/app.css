@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./public/seerah.css";
 @config "../../tailwind.config.js";
 
 /* Self-hosted fonts (was render-blocking Google Fonts). unicode-range

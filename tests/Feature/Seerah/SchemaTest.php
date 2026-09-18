@@ -25,9 +25,10 @@ class SchemaTest extends TestCase
         'seerah_milestone_translations' => ['id', 'sm_id', 'locale', 'title', 'subtitle', 'description', 'is_ready', 'created_at', 'updated_at'],
         'seerah_event_types' => ['id', 'slug', 'metadata', 'locale', 'is_active', 'created_at', 'updated_at'],
         'seerah_events' => ['id', 'slug', 'event_type', 'sm_id', 'location_id', 'order', 'thumb_url', 'cover_url', 'hijri_year', 'hijri_month', 'hijri_day', 'gregorian_date', 'status', 'era', 'statistics', 'created_at', 'updated_at'],
-        'seerah_event_translations' => ['id', 'event_id', 'locale', 'title', 'description', 'content', 'dispute_note', 'is_ready', 'metadata', 'sources', 'created_at', 'updated_at'],
+        'seerah_event_translations' => ['id', 'event_id', 'locale', 'title', 'description', 'content', 'dispute_note', 'is_ready', 'metadata', 'sources', 'seo_metadata', 'external_links', 'created_at', 'updated_at'],
         'seerah_events_gallery' => ['id', 'event_id', 'image', 'media_id', 'caption', 'order', 'created_at', 'updated_at'],
         'seerah_events_media' => ['id', 'event_id', 'media_id', 'created_at', 'updated_at'],
+        'seerah_event_links' => ['id', 'event_id', 'type', 'target_id', 'order', 'created_at', 'updated_at'],
     ];
 
     public function test_each_seerah_table_has_exactly_the_target_columns(): void
@@ -80,12 +81,24 @@ class SchemaTest extends TestCase
         DB::table('seerah_event_translations')->insert(['event_id' => $eventId, 'locale' => 'ar', 'title' => 'أ']);
         DB::table('seerah_events_gallery')->insert(['event_id' => $eventId, 'image' => 'x.jpg', 'media_id' => $mediaId]);
         DB::table('seerah_events_media')->insert(['event_id' => $eventId, 'media_id' => $mediaId]);
+        DB::table('seerah_event_links')->insert(['event_id' => $eventId, 'type' => 'verse', 'target_id' => 1]);
 
         DB::table('seerah_events')->where('id', $eventId)->delete();
 
         $this->assertSame(0, DB::table('seerah_event_translations')->count());
         $this->assertSame(0, DB::table('seerah_events_gallery')->count());
         $this->assertSame(0, DB::table('seerah_events_media')->count());
+        $this->assertSame(0, DB::table('seerah_event_links')->count());
+    }
+
+    public function test_a_target_links_to_an_event_once_per_type(): void
+    {
+        $eventId = $this->insertEvent();
+        DB::table('seerah_event_links')->insert(['event_id' => $eventId, 'type' => 'verse', 'target_id' => 7]);
+        DB::table('seerah_event_links')->insert(['event_id' => $eventId, 'type' => 'hadith', 'target_id' => 7]);
+
+        $this->expectException(QueryException::class);
+        DB::table('seerah_event_links')->insert(['event_id' => $eventId, 'type' => 'verse', 'target_id' => 7]);
     }
 
     public function test_an_event_type_in_use_cannot_be_deleted(): void

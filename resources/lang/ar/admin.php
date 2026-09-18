@@ -1015,6 +1015,8 @@ return [
     'create_tag' => 'إنشاء الوسم',
     'update_tag' => 'تحديث الوسم',
     'tag_name_ar_required' => 'اسم الوسم بالعربية مطلوب',
+    'category_name_ar_required' => 'اسم التصنيف بالعربية مطلوب',
+    'category_name_en_required' => 'اسم التصنيف بالإنجليزية مطلوب',
     'tag_name_exists' => 'وسم بهذا الاسم موجود بالفعل',
     'slug_required' => 'الرابط الثابت مطلوب (أدخله يدوياً إذا كان الاسم غير لاتيني)',
 

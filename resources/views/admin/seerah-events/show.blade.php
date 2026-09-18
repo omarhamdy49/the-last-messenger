@@ -4,429 +4,452 @@
 @include('partials.seerah-content-styles')
 @endpush
 
-@section('page-header')
-<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-    <!-- Page Title -->
-    <div>
-        <div class="flex items-center gap-2 text-sm mb-2" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-            <a href="{{ route('admin.seerah-events.index') }}" class="hover:text-accent transition-colors">أحداث السيرة النبوية</a>
-            <i data-lucide="chevron-left" class="w-4 h-4"></i>
-            <span>{{ $event->getTranslation('title', 'ar') }}</span>
-        </div>
-        <h1 class="text-3xl font-bold gradient-text flex items-center gap-3">
-            <div class="p-3 rounded-xl bg-gradient-to-r from-[#0056b3] to-[#218838] shadow-lg">
-                <i data-lucide="{{ $event->type?->icon ?? 'calendar' }}" class="w-7 h-7 text-white"></i>
-            </div>
-            {{ $event->getTranslation('title', 'ar') }}
-        </h1>
-    </div>
+@php
+    /**
+     * Admin preview of a Seerah event: everything the editor entered, laid out close to
+     * the public page, with per-language switching, readiness and record details.
+     *
+     * @var \App\Domain\Seerah\Models\SeerahEvent $event
+     * @var array<int, \App\Domain\Shared\Contracts\MediaReference> $media
+     * @var array<string, array<int, \App\Domain\Shared\Contracts\ContentReference>> $links
+     */
+    $links = $links ?? [];
+    $languages = enabled_content_languages();
+    $sanitizer = app(\App\Domain\Shared\Services\RichTextSanitizer::class);
+    $dirFor = fn (string $lang): string => in_array($lang, ['ar', 'ur'], true) ? 'rtl' : 'ltr';
+    $translation = fn (string $lang) => $event->translations->firstWhere('locale', $lang);
 
-    <!-- Action Buttons -->
-    <div class="flex flex-wrap items-center gap-3">
-        <a href="{{ route('admin.seerah-events.edit', $event->id) }}"
-           class="px-6 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 shadow-lg
-                  bg-gradient-to-r from-[#0056b3] to-[#218838] text-white">
-            <i data-lucide="edit-2" class="w-5 h-5"></i>
-            <span>{{ __('admin.edit') }}</span>
-        </a>
-        <a href="{{ route('admin.seerah-events.index') }}"
-           class="px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 flex items-center gap-2 border-2"
-           :class="darkMode ? 'border-gray-700 bg-gray-800 text-white hover:bg-gray-700' : 'border-gray-300 bg-white text-gray-900 hover:bg-gray-50'">
-            <i data-lucide="arrow-right" class="w-5 h-5"></i>
-            <span>رجوع</span>
-        </a>
-    </div>
-</div>
+    $titleLanguages = collect($languages)->filter(fn ($label, $lang) => filled($event->getTranslation('title', $lang, false)));
+    $firstLang = $titleLanguages->keys()->first() ?? 'ar';
+
+    $contentTranslations = collect($languages)
+        ->map(fn ($label, $locale) => ['label' => $label, 'html' => $sanitizer->clean($event->getTranslation('content', $locale, false))])
+        ->filter(fn ($row) => filled($row['html']));
+
+    $cover = $event->pageImageUrl();
+    $statistics = collect(is_array($event->statistics) ? $event->statistics : [])->filter(fn ($v) => is_scalar($v));
+    $published = $event->status?->value === 'published';
+
+    $linkGroups = [
+        'verse' => ['book-open', __('wizard.show.verses')],
+        'hadith' => ['quote', __('wizard.show.hadiths')],
+        'muslim' => ['users', __('wizard.show.companions')],
+        'article' => ['newspaper', __('wizard.show.articles')],
+    ];
+    $episodes = $links['episode'] ?? [];
+    $taxonomy = [...($links['tag'] ?? []), ...($links['category'] ?? [])];
+    $linkTotal = collect($linkGroups)->keys()->sum(fn ($type) => count($links[$type] ?? []));
+@endphp
+
+@section('page-header')
+<nav class="flex flex-wrap items-center gap-2 text-sm" :class="darkMode ? 'text-gray-400' : 'text-slate-500'" aria-label="breadcrumb">
+    <a href="{{ route('admin.seerah-events.index') }}" class="hover:text-accent transition-colors">أحداث السيرة النبوية</a>
+    <i data-lucide="chevron-left" class="w-4 h-4 ltr:rotate-180" aria-hidden="true"></i>
+    <span aria-current="page">{{ $event->getTranslation('title', 'ar') }}</span>
+</nav>
 @endsection
 
 @section('content')
-<div class="seerah-layout seerah-reading">
+<div class="wz-root pv-root" x-data="{ lang: @js($firstLang) }">
 
-    <!-- Main Content -->
-    <div class="min-w-0 space-y-8">
-
-        <!-- Event Header Card -->
-        <div class="rounded-2xl border overflow-hidden"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <div class="relative h-48 bg-gradient-to-br from-[#0056b3] to-[#218838]">
-                @if($event->pageImageUrl())
-                    <img src="{{ $event->pageImageUrl() }}"
-                         alt="{{ $event->getTranslation('title', 'ar') }}"
-                         class="w-full h-full object-cover opacity-60">
-                @endif
-
+    {{-- ═══════ HERO ═══════ --}}
+    <header class="pv-hero">
+        <div class="pv-hero-media">
+            @if($cover)
+                <img src="{{ $cover }}" alt="" fetchpriority="high">
+            @else
+                <div class="w-full h-full bg-gradient-to-br from-[#0b3b73] via-[#0f2a4a] to-[#16552a]"></div>
+            @endif
+        </div>
+        <div class="pv-hero-body">
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="pv-chip {{ $published ? 'is-published' : 'is-draft' }}">
+                    <i data-lucide="{{ $published ? 'globe' : 'pencil-line' }}" aria-hidden="true"></i>{{ $event->status?->labelArabic() ?? '—' }}
+                </span>
                 @if($event->type)
-                <div class="absolute bottom-4 start-4">
-                    <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-sm text-white">
-                        <i data-lucide="{{ $event->type->icon ?? 'tag' }}" class="w-4 h-4"></i>
-                        {{ $event->type->getTranslation('name', 'ar') }}
-                    </span>
-                </div>
+                    <span class="pv-chip"><i data-lucide="{{ $event->type->icon ?? 'tag' }}" aria-hidden="true"></i>{{ $event->type->name('ar') }}</span>
                 @endif
-
-                <div class="absolute bottom-4 end-4 flex items-center gap-2">
-                    @if($event->status)
-                    <span class="inline-flex items-center gap-1 px-4 py-2 rounded-full text-sm font-semibold bg-white/20 backdrop-blur-sm text-white">
-                        <i data-lucide="{{ $event->status->icon() }}" class="w-4 h-4"></i>
-                        {{ $event->status->labelArabic() }}
-                    </span>
-                    @endif
-                </div>
-            </div>
-
-            <div class="p-6">
-                <h2 class="text-2xl font-bold mb-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                    {{ $event->getTranslation('title', 'ar') }}
-                </h2>
-                @if($event->getTranslation('title', 'en'))
-                <p class="text-lg" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                    {{ $event->getTranslation('title', 'en') }}
-                </p>
+                @if($event->era)
+                    <span class="pv-chip"><i data-lucide="hourglass" aria-hidden="true"></i>{{ $event->era->labelArabic() }}</span>
                 @endif
+                @if($event->milestone)
+                    <span class="pv-chip"><i data-lucide="flag" aria-hidden="true"></i>{{ $event->milestone->getTranslation('title', 'ar') }}</span>
+                @endif
+            </div>
 
-                <div class="flex flex-wrap gap-3 mt-4">
-                    @if($event->formattedHijriDate('ar'))
-                    <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl"
-                          :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
-                        <i data-lucide="calendar" class="w-4 h-4 text-accent"></i>
-                        {{ $event->formattedHijriDate('ar') }}
-                    </span>
-                    @endif
-                    @if($event->gregorian_date)
-                    <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl"
-                          :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
-                        <i data-lucide="calendar" class="w-4 h-4 text-accent"></i>
-                        {{ $event->gregorian_date->format('Y/m/d') }} م
-                    </span>
-                    @endif
-                    @if($event->place)
-                    <span class="inline-flex items-center gap-2 px-4 py-2 rounded-xl"
-                          :class="darkMode ? 'bg-gray-800 text-gray-300' : 'bg-gray-100 text-gray-700'">
-                        <i data-lucide="map-pin" class="w-4 h-4 text-accent"></i>
-                        {{ $event->place->name('ar') }}
-                    </span>
+            @foreach($languages as $lang => $label)
+                <div x-show="lang === '{{ $lang }}'" @if($lang !== $firstLang) x-cloak @endif dir="{{ $dirFor($lang) }}" lang="{{ $lang }}" class="grid gap-3">
+                    <h1 class="pv-hero-title">{{ $event->getTranslation('title', $lang, false) ?: $event->getTranslation('title', 'ar') }}</h1>
+                    @if(filled($event->getTranslation('description', $lang, false)))
+                        <div class="pv-hero-lead seerah-content">{!! $sanitizer->clean($event->getTranslation('description', $lang, false)) !!}</div>
                     @endif
                 </div>
+            @endforeach
+
+            <div class="flex flex-wrap items-center gap-2">
+                @if($event->formattedHijriDate('ar'))
+                    <span class="pv-chip"><i data-lucide="moon" aria-hidden="true"></i>{{ $event->formattedHijriDate('ar') }}</span>
+                @endif
+                @if($event->gregorian_date)
+                    <span class="pv-chip" dir="ltr"><i data-lucide="calendar" aria-hidden="true"></i>{{ $event->gregorian_date->format('Y/m/d') }}</span>
+                @endif
+                @if($event->place)
+                    <span class="pv-chip"><i data-lucide="map-pin" aria-hidden="true"></i>{{ $event->place->name('ar') }}</span>
+                @endif
             </div>
         </div>
+    </header>
 
-        <!-- Description -->
-        @php
-            $descriptionLanguages = collect(enabled_content_languages())
-                ->filter(fn ($label, $locale) => filled($event->getTranslation('description', $locale, false)));
-        @endphp
-        @if($descriptionLanguages->isNotEmpty())
-        <div class="rounded-2xl border p-6"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <h2 class="text-xl font-bold mb-6 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="file-text" class="w-5 h-5 text-accent"></i>
-                الوصف
-            </h2>
-
-            <div x-data="{ activeTab: '{{ $descriptionLanguages->keys()->first() }}' }" class="space-y-4">
-                <!-- Language Tabs -->
-                <div class="flex flex-wrap gap-2 border-b pb-4" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-                    @foreach($descriptionLanguages as $lang => $label)
-                        @if($event->getTranslation('description', $lang, false))
-                        <button type="button" @click="activeTab = '{{ $lang }}'"
-                                class="px-4 py-2 rounded-lg font-medium transition-all"
-                                :class="activeTab === '{{ $lang }}' ?
-                                    'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white' :
-                                    (darkMode ? 'bg-gray-800 text-gray-400 hover:text-white' : 'bg-gray-100 text-gray-600 hover:text-gray-900')">
-                            {{ $label }}
-                        </button>
-                        @endif
-                    @endforeach
-                </div>
-
-                <!-- Content -->
-                @foreach(enabled_content_locales() as $lang)
-                    @if($event->getTranslation('description', $lang, false))
-                    <div x-show="activeTab === '{{ $lang }}'"
-                         class="p-4 rounded-xl"
-                         :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                        <div class="seerah-content leading-relaxed break-words {{ in_array($lang, ['ar', 'ur']) ? 'text-right' : 'text-left' }}"
-                           :class="darkMode ? 'text-gray-300' : 'text-gray-700'"
-                           dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">
-                            {!! app(\App\Domain\Shared\Services\RichTextSanitizer::class)->clean($event->getTranslation('description', $lang, false)) !!}
-                        </div>
-                    </div>
-                    @endif
-                @endforeach
-            </div>
+    {{-- ═══════ TOOLBAR ═══════ --}}
+    <div class="pv-toolbar">
+        <div class="wz-langs" role="group" aria-label="{{ __('wizard.languages') }}">
+            @foreach($languages as $lang => $label)
+                <button type="button" class="wz-lang" :class="{ 'is-active': lang === '{{ $lang }}', 'is-filled': {{ $titleLanguages->has($lang) ? 'true' : 'false' }} }"
+                        :aria-pressed="lang === '{{ $lang }}'" @click="lang = '{{ $lang }}'; $dispatch('pv-lang', '{{ $lang }}')">
+                    <span class="wz-dot" aria-hidden="true"></span>{{ $label }}
+                </button>
+            @endforeach
         </div>
-        @endif
-
-        @php
-            $contentTranslations = collect(enabled_content_languages())
-                ->map(fn ($label, $locale) => [
-                    'label' => $label,
-                    'html' => app(\App\Domain\Shared\Services\RichTextSanitizer::class)->clean($event->getTranslation('content', $locale, false)),
-                ])
-                ->filter(fn ($translation) => filled($translation['html']));
-        @endphp
-
-        @if($contentTranslations->isNotEmpty())
-        <section aria-labelledby="event-content-heading" class="rounded-2xl border p-6"
-                 :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <h2 id="event-content-heading" class="text-xl font-bold mb-6 flex items-center gap-2"
-                :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="book-open" class="w-5 h-5 text-accent"></i>
-                المحتوى الكامل
-            </h2>
-
-            <div x-data="{ activeTab: '{{ $contentTranslations->keys()->first() }}' }" class="space-y-4">
-                <div class="flex flex-wrap gap-2 border-b pb-4" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-                    @foreach($contentTranslations as $lang => $translation)
-                    <button type="button" @click="activeTab = '{{ $lang }}'"
-                            :aria-pressed="activeTab === '{{ $lang }}'" aria-controls="event-content-{{ $lang }}"
-                            class="px-4 py-2 rounded-lg font-medium transition-all"
-                            :class="activeTab === '{{ $lang }}' ?
-                                'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white' :
-                                (darkMode ? 'bg-gray-800 text-gray-400 hover:text-white' : 'bg-gray-100 text-gray-600 hover:text-gray-900')">
-                        {{ $translation['label'] }}
-                    </button>
-                    @endforeach
-                </div>
-
-                @foreach($contentTranslations as $lang => $translation)
-                <div id="event-content-{{ $lang }}" x-show="activeTab === '{{ $lang }}'" @if(!$loop->first) x-cloak @endif
-                     class="seerah-content leading-relaxed break-words {{ in_array($lang, ['ar', 'ur']) ? 'text-right' : 'text-left' }}"
-                     :class="darkMode ? 'text-gray-300' : 'text-gray-700'"
-                     lang="{{ $lang }}" dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">
-                    {!! $translation['html'] !!}
-                </div>
-                @endforeach
-            </div>
-        </section>
-        @endif
-
-        <!-- Names in Different Languages -->
-        <div class="rounded-2xl border p-6"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <h2 class="text-xl font-bold mb-6 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="languages" class="w-5 h-5 text-accent"></i>
-                العنوان بلغات مختلفة
-            </h2>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                @foreach(enabled_content_languages() as $lang => $label)
-                    @if($event->getTranslation('title', $lang))
-                    <div class="p-4 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                        <label class="text-xs font-medium" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">
-                            {{ $label }}
-                        </label>
-                        <p class="text-lg font-semibold mt-1" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                            {{ $event->getTranslation('title', $lang) }}
-                        </p>
-                    </div>
-                    @endif
-                @endforeach
-            </div>
-        </div>
-
-        <!-- تنبيه الخلاف في التأريخ — يُعرض للزائر كصندوق تحذير في صفحة الحدث -->
-        @if($event->getTranslation('dispute_note', 'ar', false))
-        <div class="rounded-2xl border p-6 border-red-300/60 bg-red-50 dark:bg-red-500/10 dark:border-red-400/30">
-            <h2 class="text-xl font-bold mb-6 flex items-center gap-2 text-red-900 dark:text-red-200">
-                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
-                تنبيه الخلاف في التأريخ
-            </h2>
-
-            <div class="space-y-3">
-                @foreach(enabled_content_languages() as $lang => $label)
-                    @if($event->getTranslation('dispute_note', $lang, false))
-                    <div class="p-4 rounded-xl bg-white/60 dark:bg-white/[.04]">
-                        <label class="text-xs font-medium text-red-700 dark:text-red-300">{{ $label }}</label>
-                        <p class="mt-1 leading-relaxed text-red-900 dark:text-red-100"
-                           dir="{{ in_array($lang, ['ar', 'ur']) ? 'rtl' : 'ltr' }}">
-                            {{ $event->getTranslation('dispute_note', $lang, false) }}
-                        </p>
-                    </div>
-                    @endif
-                @endforeach
-            </div>
-        </div>
-        @endif
-
-        @php
-            $details = $event->metadataFor('ar');
-            $sources = $event->sourcesFor('ar');
-        @endphp
-        @if($details !== [] || $sources !== [])
-        <div class="rounded-2xl border p-6"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            @if($details !== [])
-            <h2 class="text-xl font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="list" class="w-5 h-5 text-accent"></i>
-                تفاصيل إضافية
-            </h2>
-            <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-                @foreach($details as $row)
-                <div class="p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <dt class="text-xs font-medium" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ $row['key'] ?? '' }}</dt>
-                    <dd class="mt-1 font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $row['value'] ?? '' }}</dd>
-                </div>
-                @endforeach
-            </dl>
+        <div class="flex flex-wrap items-center gap-2">
+            @if($published)
+                <a href="{{ route('public.seerah.event', $event->slug) }}" target="_blank" rel="noopener" class="wz-btn is-ghost">
+                    <i data-lucide="external-link" aria-hidden="true"></i><span class="hidden sm:inline">{{ __('wizard.open_public') }}</span>
+                </a>
             @endif
-
-            @if($sources !== [])
-            <h2 class="text-xl font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="library" class="w-5 h-5 text-accent"></i>
-                المصادر والمراجع
-            </h2>
-            <ul class="space-y-2">
-                @foreach($sources as $source)
-                <li class="p-3 rounded-xl text-sm" :class="darkMode ? 'bg-gray-800/50 text-gray-300' : 'bg-gray-50 text-gray-700'">
-                    {{ collect([$source['title'] ?? null, $source['author'] ?? null, $source['reference'] ?? null])->filter()->implode(' — ') }}
-                </li>
-                @endforeach
-            </ul>
-            @endif
+            <a href="{{ route('admin.seerah-events.create') }}" class="wz-btn is-ghost">
+                <i data-lucide="plus" aria-hidden="true"></i><span class="hidden sm:inline">إضافة حدث</span>
+            </a>
+            <a href="{{ route('admin.seerah-events.edit', $event->id) }}" class="wz-btn is-primary">
+                <i data-lucide="pencil" aria-hidden="true"></i>{{ __('wizard.open_editor') }}
+            </a>
         </div>
-        @endif
-
-        @if($event->gallery->isNotEmpty() || $media !== [])
-        <div class="rounded-2xl border p-6"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            @if($event->gallery->isNotEmpty())
-            <h2 class="text-xl font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="images" class="w-5 h-5 text-accent"></i>
-                معرض الصور
-            </h2>
-            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-                @foreach($event->gallery as $item)
-                <figure>
-                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($item->image) }}" alt="{{ $item->captionFor('ar') }}" loading="lazy" class="w-full aspect-video object-cover rounded-lg">
-                    @if($item->captionFor('ar'))
-                    <figcaption class="mt-1 text-xs" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ $item->captionFor('ar') }}</figcaption>
-                    @endif
-                </figure>
-                @endforeach
-            </div>
-            @endif
-
-            @if($media !== [])
-            <h2 class="text-xl font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="video" class="w-5 h-5 text-accent"></i>
-                الوسائط المرفقة
-            </h2>
-            <ul class="space-y-2">
-                @foreach($media as $item)
-                <li class="flex items-center gap-3 p-3 rounded-xl text-sm" :class="darkMode ? 'bg-gray-800/50 text-gray-300' : 'bg-gray-50 text-gray-700'">
-                    <i data-lucide="file" class="w-4 h-4 text-accent shrink-0"></i>
-                    <span class="truncate">{{ $item->title }}</span>
-                    <span class="ms-auto text-xs" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ $item->type }}</span>
-                </li>
-                @endforeach
-            </ul>
-            @endif
-        </div>
-        @endif
     </div>
 
-    <!-- Sidebar -->
-    <div class="space-y-6">
+    {{-- ═══════ FIGURES ═══════ --}}
+    @if($statistics->isNotEmpty())
+        <section class="pv-stats pv-reveal mb-6" aria-label="{{ __('wizard.show.statistics') }}">
+            @foreach($statistics as $label => $value)
+                <div class="wz-card pv-stat">
+                    <p class="pv-stat-value">{{ $value }}</p>
+                    <p class="pv-stat-label">{{ $label }}</p>
+                </div>
+            @endforeach
+        </section>
+    @endif
 
-        <!-- Event Info -->
-        <div class="rounded-2xl border p-6"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <h3 class="text-lg font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="info" class="w-5 h-5 text-accent"></i>
-                معلومات
-            </h3>
+    <div class="pv-layout">
+        <div class="min-w-0 grid gap-6 pv-reveal">
 
-            <div class="space-y-4">
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الرابط المختصر</span>
-                    <span class="font-mono text-sm" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->slug }}</span>
-                </div>
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">نوع الحدث</span>
-                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->type?->getTranslation('name', 'ar') ?? '-' }}</span>
-                </div>
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">{{ __('admin.status') }}</span>
-                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->status?->labelArabic() ?? '-' }}</span>
-                </div>
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الحقبة</span>
-                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->milestone?->getTranslation('title', 'ar') ?? '-' }}</span>
-                </div>
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">الحقبة التاريخية</span>
-                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->era?->labelArabic() ?? '-' }}</span>
-                </div>
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">ترتيب العرض</span>
-                    <span class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->order }}</span>
-                </div>
-                <div class="flex items-center justify-between p-3 rounded-xl" :class="darkMode ? 'bg-gray-800/50' : 'bg-gray-50'">
-                    <span :class="darkMode ? 'text-gray-400' : 'text-gray-600'">تاريخ الإضافة</span>
-                    <span class="font-medium" :class="darkMode ? 'text-white' : 'text-gray-900'">{{ $event->created_at?->format('Y/m/d') }}</span>
-                </div>
+            {{-- Dispute note --}}
+            @foreach($languages as $lang => $label)
+                @if(filled($event->getTranslation('dispute_note', $lang, false)))
+                    <aside x-show="lang === '{{ $lang }}'" @if($lang !== $firstLang) x-cloak @endif
+                           class="wz-alert !mb-0 !border-amber-400/40 !bg-amber-500/10 !text-amber-800 dark:!text-amber-200" dir="{{ $dirFor($lang) }}">
+                        <p class="wz-alert-title"><i data-lucide="alert-triangle" aria-hidden="true"></i>{{ __('wizard.show.dispute') }}</p>
+                        <p class="text-sm leading-relaxed">{{ $event->getTranslation('dispute_note', $lang, false) }}</p>
+                    </aside>
+                @endif
+            @endforeach
+
+            {{-- Content --}}
+            @if($contentTranslations->isNotEmpty())
+                <section aria-labelledby="event-content-heading" class="wz-card pv-section">
+                    <h2 id="event-content-heading" class="pv-section-title">
+                        <i data-lucide="book-open" aria-hidden="true"></i>المحتوى الكامل
+                    </h2>
+                    <div x-data="{ activeTab: '{{ $contentTranslations->keys()->first() }}' }"
+                         @pv-lang.window="if (@js($contentTranslations->keys()).includes($event.detail)) activeTab = $event.detail"
+                         class="grid gap-5">
+                        @if($contentTranslations->count() > 1)
+                            <div class="wz-langs w-fit">
+                                @foreach($contentTranslations as $lang => $row)
+                                    <button type="button" class="wz-lang is-filled" :class="{ 'is-active': activeTab === '{{ $lang }}' }"
+                                            :aria-pressed="activeTab === '{{ $lang }}'" aria-controls="event-content-{{ $lang }}"
+                                            @click="activeTab = '{{ $lang }}'">
+                                        <span class="wz-dot" aria-hidden="true"></span>{{ $row['label'] }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        @endif
+                        @foreach($contentTranslations as $lang => $row)
+                            <article id="event-content-{{ $lang }}" x-show="activeTab === '{{ $lang }}'" @if(! $loop->first) x-cloak @endif
+                                     class="pv-prose seerah-content" lang="{{ $lang }}" dir="{{ $dirFor($lang) }}">
+                                {!! $row['html'] !!}
+                            </article>
+                        @endforeach
+                    </div>
+                </section>
+            @else
+                <section class="wz-card pv-section">
+                    <h2 class="pv-section-title"><i data-lucide="book-open" aria-hidden="true"></i>{{ __('wizard.show.content') }}</h2>
+                    <div class="wz-empty">
+                        <i data-lucide="file-plus-2" aria-hidden="true"></i>
+                        <p>{{ __('wizard.show.no_content') }}</p>
+                        <a href="{{ route('admin.seerah-events.edit', $event->id) }}#step-content" class="wz-btn is-soft">{{ __('wizard.open_editor') }}</a>
+                    </div>
+                </section>
+            @endif
+
+            {{-- Gallery --}}
+            @if($event->gallery->isNotEmpty())
+                <section class="wz-card pv-section" aria-labelledby="pv-gallery">
+                    <h2 id="pv-gallery" class="pv-section-title">
+                        <i data-lucide="images" aria-hidden="true"></i>{{ __('wizard.show.gallery') }}
+                        <span class="pv-count">{{ $event->gallery->count() }}</span>
+                    </h2>
+                    <div class="pv-gallery">
+                        @foreach($event->gallery as $item)
+                            <figure>
+                                <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($item->image) }}" alt="{{ $item->captionFor('ar') }}" loading="lazy">
+                                @if($item->captionFor('ar'))
+                                    <figcaption>{{ $item->captionFor('ar') }}</figcaption>
+                                @endif
+                            </figure>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
+
+            {{-- Related content --}}
+            <section class="wz-card pv-section" aria-labelledby="pv-links">
+                <h2 id="pv-links" class="pv-section-title">
+                    <i data-lucide="network" aria-hidden="true"></i>{{ __('wizard.show.links') }}
+                    <span class="pv-count">{{ $linkTotal }}</span>
+                </h2>
+                @if($linkTotal === 0)
+                    <div class="wz-empty">
+                        <i data-lucide="link-2-off" aria-hidden="true"></i>
+                        <p>{{ __('wizard.show.nothing_linked') }}</p>
+                        <a href="{{ route('admin.seerah-events.edit', $event->id) }}#step-links" class="wz-btn is-soft">{{ __('wizard.open_editor') }}</a>
+                    </div>
+                @else
+                    <div class="grid gap-5 lg:grid-cols-2">
+                        @foreach($linkGroups as $type => [$icon, $groupLabel])
+                            @continue(empty($links[$type]))
+                            <div class="grid gap-2 content-start">
+                                <p class="text-xs font-bold text-slate-500 flex items-center gap-1.5"><i data-lucide="{{ $icon }}" class="w-3.5 h-3.5" aria-hidden="true"></i>{{ $groupLabel }} · {{ count($links[$type]) }}</p>
+                                <div class="pv-list">
+                                    @foreach($links[$type] as $ref)
+                                        <{{ $ref->url ? 'a' : 'div' }} @if($ref->url) href="{{ $ref->url }}" target="_blank" rel="noopener" @endif class="pv-item">
+                                            <span class="pv-item-icon">
+                                                @if($ref->thumbUrl)<img src="{{ $ref->thumbUrl }}" alt="" loading="lazy">@else<i data-lucide="{{ $icon }}" aria-hidden="true"></i>@endif
+                                            </span>
+                                            <span class="min-w-0">
+                                                <span class="pv-item-title block">{{ $ref->title }}</span>
+                                                @if($ref->subtitle)<span class="pv-item-sub block">{{ $ref->subtitle }}</span>@endif
+                                            </span>
+                                            <span class="pv-item-end">@if($ref->url)<i data-lucide="arrow-up-left" class="w-4 h-4 ltr:rotate-90" aria-hidden="true"></i>@endif</span>
+                                        </{{ $ref->url ? 'a' : 'div' }}>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
+                @if($taxonomy !== [])
+                    <div class="mt-5 pt-5 border-t flex flex-wrap gap-2" :class="darkMode ? 'border-white/10' : 'border-slate-200'">
+                        @foreach($taxonomy as $ref)
+                            <span class="wz-pill"><i data-lucide="{{ $ref->type->value === 'tag' ? 'hash' : 'folder' }}" class="w-3.5 h-3.5" aria-hidden="true"></i>{{ $ref->title }}</span>
+                        @endforeach
+                    </div>
+                @endif
+
+                @foreach($languages as $lang => $label)
+                    @php $external = $event->externalLinksFor($lang); @endphp
+                    @if($external !== [])
+                        <div x-show="lang === '{{ $lang }}'" @if($lang !== $firstLang) x-cloak @endif class="mt-5 pt-5 border-t grid gap-2" :class="darkMode ? 'border-white/10' : 'border-slate-200'">
+                            <p class="text-xs font-bold text-slate-500">{{ __('wizard.show.external') }}</p>
+                            <div class="pv-list">
+                                @foreach($external as $row)
+                                    <a href="{{ $row['url'] }}" target="_blank" rel="noopener noreferrer" class="pv-item">
+                                        <span class="pv-item-icon"><i data-lucide="globe" aria-hidden="true"></i></span>
+                                        <span class="min-w-0">
+                                            <span class="pv-item-title block">{{ $row['title'] ?: $row['url'] }}</span>
+                                            <span class="pv-item-sub block" dir="ltr">{{ parse_url($row['url'], PHP_URL_HOST) }}</span>
+                                        </span>
+                                        <span class="pv-item-end"><i data-lucide="external-link" class="w-4 h-4" aria-hidden="true"></i></span>
+                                    </a>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+                @endforeach
+            </section>
+
+            {{-- Media & episodes --}}
+            @if($media !== [] || $episodes !== [])
+                <section class="wz-card pv-section" aria-labelledby="pv-media">
+                    <h2 id="pv-media" class="pv-section-title">
+                        <i data-lucide="clapperboard" aria-hidden="true"></i>{{ __('wizard.show.media') }}
+                        <span class="pv-count">{{ count($media) + count($episodes) }}</span>
+                    </h2>
+                    <div class="grid gap-5 lg:grid-cols-2">
+                        @if($episodes !== [])
+                            <div class="grid gap-2 content-start">
+                                <p class="text-xs font-bold text-slate-500">{{ __('wizard.show.episodes') }} · {{ count($episodes) }}</p>
+                                <ol class="pv-list">
+                                    @foreach($episodes as $ref)
+                                        <li>
+                                            <{{ $ref->url ? 'a' : 'div' }} @if($ref->url) href="{{ $ref->url }}" target="_blank" rel="noopener" @endif class="pv-item">
+                                                <span class="pv-item-icon !w-16 !h-10">
+                                                    @if($ref->thumbUrl)<img src="{{ $ref->thumbUrl }}" alt="" loading="lazy">@else<i data-lucide="play" aria-hidden="true"></i>@endif
+                                                </span>
+                                                <span class="min-w-0">
+                                                    <span class="pv-item-title block">{{ $ref->title }}</span>
+                                                    @if($ref->subtitle)<span class="pv-item-sub block">{{ $ref->subtitle }}</span>@endif
+                                                </span>
+                                                <span class="pv-item-end tabular-nums">{{ $loop->iteration }}</span>
+                                            </{{ $ref->url ? 'a' : 'div' }}>
+                                        </li>
+                                    @endforeach
+                                </ol>
+                            </div>
+                        @endif
+                        @if($media !== [])
+                            <div class="grid gap-2 content-start">
+                                <p class="text-xs font-bold text-slate-500">{{ __('wizard.show.files') }} · {{ count($media) }}</p>
+                                <div class="pv-list">
+                                    @foreach($media as $item)
+                                        <{{ $item->url ? 'a' : 'div' }} @if($item->url) href="{{ $item->url }}" target="_blank" rel="noopener" @endif class="pv-item">
+                                            <span class="pv-item-icon">
+                                                @if($item->thumbnailUrl)<img src="{{ $item->thumbnailUrl }}" alt="" loading="lazy">@else<i data-lucide="file" aria-hidden="true"></i>@endif
+                                            </span>
+                                            <span class="min-w-0">
+                                                <span class="pv-item-title block">{{ $item->title }}</span>
+                                                <span class="pv-item-sub block">{{ $item->mimeType ?? $item->type }}</span>
+                                            </span>
+                                            <span class="pv-item-end">{{ $item->type }}</span>
+                                        </{{ $item->url ? 'a' : 'div' }}>
+                                    @endforeach
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                </section>
+            @endif
+
+            {{-- Details & sources --}}
+            @foreach($languages as $lang => $label)
+                @php
+                    $details = $translation($lang)?->metadata ?? [];
+                    $sources = $translation($lang)?->sources ?? [];
+                @endphp
+                @if($details !== [] || $sources !== [])
+                    <section x-show="lang === '{{ $lang }}'" @if($lang !== $firstLang) x-cloak @endif class="wz-card pv-section grid gap-6" dir="{{ $dirFor($lang) }}">
+                        @if($details !== [])
+                            <div>
+                                <h2 class="pv-section-title"><i data-lucide="list" aria-hidden="true"></i>{{ __('wizard.show.metadata') }}</h2>
+                                <dl class="grid gap-3 sm:grid-cols-2">
+                                    @foreach($details as $row)
+                                        <div class="rounded-xl p-3 border" :class="darkMode ? 'border-white/10 bg-white/[0.02]' : 'border-slate-200 bg-slate-50/70'">
+                                            <dt class="text-xs font-semibold text-slate-500">{{ $row['key'] ?? '' }}</dt>
+                                            <dd class="mt-1 font-semibold" :class="darkMode ? 'text-white' : 'text-slate-900'">{{ $row['value'] ?? '' }}</dd>
+                                        </div>
+                                    @endforeach
+                                </dl>
+                            </div>
+                        @endif
+                        @if($sources !== [])
+                            <div>
+                                <h2 class="pv-section-title"><i data-lucide="library" aria-hidden="true"></i>{{ __('wizard.show.sources') }}</h2>
+                                <ol class="grid gap-2">
+                                    @foreach($sources as $source)
+                                        <li class="flex gap-3 items-baseline text-sm">
+                                            <span class="tabular-nums font-bold text-slate-400">{{ $loop->iteration }}.</span>
+                                            <span :class="darkMode ? 'text-slate-300' : 'text-slate-700'">
+                                                <strong :class="darkMode ? 'text-white' : 'text-slate-900'">{{ $source['title'] ?? '' }}</strong>
+                                                @if(filled($source['author'] ?? null)) — {{ $source['author'] }}@endif
+                                                @if(filled($source['reference'] ?? null))<span class="text-slate-500"> · {{ $source['reference'] }}</span>@endif
+                                            </span>
+                                        </li>
+                                    @endforeach
+                                </ol>
+                            </div>
+                        @endif
+                    </section>
+                @endif
+            @endforeach
+
+            {{-- Search appearance --}}
+            <section class="wz-card pv-section" aria-labelledby="pv-seo">
+                <h2 id="pv-seo" class="pv-section-title"><i data-lucide="scan-search" aria-hidden="true"></i>{{ __('articles.seo.preview') }}</h2>
+                @foreach($languages as $lang => $label)
+                    @php $seo = $event->seoFor($lang); @endphp
+                    <div x-show="lang === '{{ $lang }}'" @if($lang !== $firstLang) x-cloak @endif dir="{{ $dirFor($lang) }}" class="max-w-[65ch]">
+                        <p class="text-xs text-slate-500 truncate" dir="ltr">{{ route('public.seerah.event', $event->slug) }}</p>
+                        <p class="mt-1 text-lg font-semibold leading-snug text-[#1a0dab] dark:text-[#8ab4f8]">{{ $seo['title'] ?? ($event->getTranslation('title', $lang, false) ?: $event->getTranslation('title', 'ar')) }}</p>
+                        <p class="mt-1 text-sm leading-relaxed" :class="darkMode ? 'text-slate-400' : 'text-slate-600'">
+                            {{ $seo['description'] ?? \Illuminate\Support\Str::limit(strip_tags((string) $event->getTranslation('description', $lang, false)), 160) }}
+                        </p>
+                    </div>
+                @endforeach
+            </section>
+        </div>
+
+        {{-- ═══════ ASIDE ═══════ --}}
+        <aside class="pv-aside">
+            <div class="wz-card wz-rail-card">
+                <p class="wz-rail-title"><i data-lucide="database" aria-hidden="true"></i>{{ __('wizard.show.record') }}</p>
+                <dl class="wz-kv !mt-0">
+                    <div><dt>الرابط المختصر</dt><dd class="font-mono text-xs" dir="ltr">{{ $event->slug }}</dd></div>
+                    <div><dt>نوع الحدث</dt><dd>{{ $event->type?->name('ar') ?? '—' }}</dd></div>
+                    <div><dt>{{ __('admin.status') }}</dt><dd>{{ $event->status?->labelArabic() ?? '—' }}</dd></div>
+                    <div><dt>الحقبة</dt><dd>{{ $event->milestone?->getTranslation('title', 'ar') ?? '—' }}</dd></div>
+                    <div><dt>الحقبة التاريخية</dt><dd>{{ $event->era?->labelArabic() ?? '—' }}</dd></div>
+                    <div><dt>ترتيب العرض</dt><dd class="tabular-nums">{{ $event->order }}</dd></div>
+                    <div><dt>{{ __('wizard.show.created') }}</dt><dd class="tabular-nums">{{ $event->created_at?->format('Y/m/d') }}</dd></div>
+                    <div><dt>{{ __('wizard.show.updated') }}</dt><dd>{{ $event->updated_at?->diffForHumans() }}</dd></div>
+                </dl>
             </div>
-        </div>
 
-        <!-- Quick Actions -->
-        <div class="rounded-2xl border p-6"
-             :class="darkMode ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'">
-            <h3 class="text-lg font-bold mb-4 flex items-center gap-2" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                <i data-lucide="zap" class="w-5 h-5 text-accent"></i>
-                إجراءات سريعة
-            </h3>
-
-            <div class="space-y-3">
-                <a href="{{ route('admin.seerah-events.edit', $event->id) }}"
-                   class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:scale-102"
-                   :class="darkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-900'">
-                    <i data-lucide="edit-2" class="w-5 h-5 text-accent"></i>
-                    <span>تعديل الحدث</span>
-                </a>
-
-                <a href="{{ route('admin.seerah-events.create') }}"
-                   class="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all hover:scale-102"
-                   :class="darkMode ? 'bg-gray-800 hover:bg-gray-700 text-white' : 'bg-gray-50 hover:bg-gray-100 text-gray-900'">
-                    <i data-lucide="plus" class="w-5 h-5 text-accent"></i>
-                    <span>إضافة حدث جديد</span>
-                </a>
+            <div class="wz-card wz-rail-card">
+                <p class="wz-rail-title"><i data-lucide="languages" aria-hidden="true"></i>{{ __('wizard.show.readiness') }}</p>
+                <ul class="pv-locales">
+                    @foreach($languages as $lang => $label)
+                        @php
+                            $row = $translation($lang);
+                            $parts = collect(['title', 'description', 'content'])->filter(fn ($f) => filled($row?->{$f}))->count();
+                        @endphp
+                        <li class="pv-locale">
+                            <button type="button" class="font-semibold hover:underline" @click="lang = '{{ $lang }}'; $dispatch('pv-lang', '{{ $lang }}')">{{ $label }}</button>
+                            <span class="flex items-center gap-2">
+                                <span class="text-xs tabular-nums text-slate-500">{{ $parts }}/3</span>
+                                <span class="wz-pill !min-h-6 {{ $row?->is_ready ? 'is-success' : ($row ? 'is-warn' : '') }}">
+                                    <span class="wz-dot" aria-hidden="true"></span>
+                                    {{ $row?->is_ready ? __('wizard.show.ready') : ($row ? __('wizard.show.not_ready') : __('wizard.show.missing')) }}
+                                </span>
+                            </span>
+                        </li>
+                    @endforeach
+                </ul>
             </div>
-        </div>
 
-        <!-- Delete -->
-        <div class="rounded-2xl border p-6"
-             :class="darkMode ? 'bg-gray-900/50 border-red-800/50' : 'bg-white border-red-200'">
-            <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-red-500">
-                <i data-lucide="trash-2" class="w-5 h-5"></i>
-                حذف الحدث
-            </h3>
+            @if($event->place)
+                <div class="wz-card wz-rail-card">
+                    <p class="wz-rail-title"><i data-lucide="map-pinned" aria-hidden="true"></i>{{ __('wizard.show.place') }}</p>
+                    <p class="font-bold" :class="darkMode ? 'text-white' : 'text-slate-900'">{{ $event->place->name('ar') }}</p>
+                    @if($coords = $event->resolvedCoordinates())
+                        <p class="wz-help tabular-nums" dir="ltr">{{ number_format($coords['latitude'], 4) }}, {{ number_format($coords['longitude'], 4) }}</p>
+                        <a href="https://www.openstreetmap.org/?mlat={{ $coords['latitude'] }}&mlon={{ $coords['longitude'] }}#map=10/{{ $coords['latitude'] }}/{{ $coords['longitude'] }}"
+                           target="_blank" rel="noopener noreferrer" class="wz-btn is-ghost w-full mt-3"><i data-lucide="map" aria-hidden="true"></i>OpenStreetMap</a>
+                    @endif
+                </div>
+            @endif
 
-            <p class="text-sm mb-4" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
-                سيتم حذف هذا الحدث نهائياً ولا يمكن استرجاعه.
-            </p>
-
-            <form action="{{ route('admin.seerah-events.destroy', $event->id) }}"
-                  method="POST"
-                  @submit.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => $el.submit() })">
-                @csrf
-                @method('DELETE')
-                <button type="submit"
-                        class="w-full px-4 py-2.5 rounded-xl font-semibold transition-all hover:scale-105 bg-red-500 hover:bg-red-600 text-white flex items-center justify-center gap-2">
-                    <i data-lucide="trash-2" class="w-5 h-5"></i>
-                    <span>حذف الحدث</span>
-                </button>
-            </form>
-        </div>
-
+            <div class="wz-card wz-rail-card !border-red-500/20">
+                <p class="wz-rail-title !text-red-600"><i data-lucide="trash-2" class="!text-red-600" aria-hidden="true"></i>حذف الحدث</p>
+                <p class="wz-help !mt-0 mb-3">سيتم حذف هذا الحدث نهائياً ولا يمكن استرجاعه.</p>
+                <form action="{{ route('admin.seerah-events.destroy', $event->id) }}" method="POST"
+                      @submit.prevent="$dispatch('show-confirm', { title: '{{ __("admin.confirm_delete") }}', message: '{{ __("admin.delete_warning") }}', type: 'danger', onConfirm: () => $el.submit() })">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="wz-btn w-full !text-red-600 !border-red-500/30 hover:!bg-red-500/10">
+                        <i data-lucide="trash-2" aria-hidden="true"></i>حذف الحدث
+                    </button>
+                </form>
+            </div>
+        </aside>
     </div>
 </div>
 @endsection
-
-@push('scripts')
-<script>
-    document.addEventListener('DOMContentLoaded', () => {
-        lucide.createIcons();
-    });
-</script>
-@endpush

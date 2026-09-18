@@ -3,7 +3,66 @@
 declare(strict_types=1);
 
 return [
+    'admin' => [
+        'tab_links' => 'روابط',
+        'form_sections' => 'فارم کے حصے',
+        'tab_has_errors' => 'اس ٹیب میں غلطیاں ہیں',
+        'fix_errors' => 'براہ کرم ٹیبز میں نشان زدہ خانوں کو درست کریں۔',
+        'related_content' => 'متعلقہ مواد',
+        'related_content_help' => 'واقعے کو متعلقہ آیات، احادیث، صحابہ اور مضامین سے جوڑیں؛ یہ واقعے کے صفحے پر ظاہر ہوں گے۔',
+        'link_verses' => 'آیات',
+        'link_hadiths' => 'احادیث',
+        'link_companions' => 'صحابہ اور شخصیات',
+        'link_articles' => 'مضامین',
+        'add_link' => 'شامل کریں',
+        'search_articles' => 'مضمون تلاش کریں…',
+        'no_links' => 'ابھی کوئی روابط نہیں۔',
+        'no_options' => 'کوئی اختیارات نہیں۔',
+        'quick_create' => 'نیا بنائیں',
+        'quick_name_ar' => 'عربی نام',
+        'quick_name_en' => 'انگریزی نام',
+        'quick_name_required' => 'پہلے عربی نام درج کریں',
+        'quick_create_failed' => 'بنایا نہیں جا سکا، دوبارہ کوشش کریں',
+        'external_links' => 'بیرونی روابط',
+        'external_links_help' => 'ہر زبان کے لیے آن لائن حوالوں، نقشوں یا ذرائع کے روابط۔',
+        'link_title' => 'ربط کا عنوان',
+    ],
+
     'public' => [
+
+        'view_label' => 'انداز',
+
+        'view_timeline' => 'ٹائم لائن',
+
+        'view_grid' => 'کارڈز',
+
+        'save_event' => 'واقعہ محفوظ کریں',
+
+        'unsave_event' => 'محفوظ سے ہٹائیں',
+
+        'copy_link' => 'لنک کاپی کریں',
+
+        'share_whatsapp' => 'واٹس ایپ',
+
+        'share_x' => 'ایکس',
+
+        'share_facebook' => 'فیس بک',
+
+        'reading_time' => ':minutes منٹ مطالعہ',
+
+        'events_in_year' => ':count واقعات',
+
+        'year_heading' => 'سال :year',
+
+        'open_event' => 'واقعہ کھولیں',
+
+        'back_to_events' => 'تمام واقعات',
+
+        'save_failed' => 'محفوظ نہیں ہو سکا، دوبارہ کوشش کریں',
+
+        'chapter' => ':number',
+
+        'reading_tools' => 'مطالعہ کے اوزار',
         'page_title' => 'سیرتِ نبوی',
         'page_description' => 'خاتم المرسلین ﷺ کی حیاتِ طیبہ کا ایک سفر، ایک متعامل ٹائم لائن کے ذریعے جو سیرتِ نبوی کے اہم سنگِ میل کو محفوظ کرتی ہے۔',
         'hero_badge' => 'متعامل ٹائم لائن',
@@ -36,6 +95,14 @@ return [
         'section_sources' => 'مصادر و حوالہ جات',
         'section_more_details' => 'مزید تفصیلات',
         'section_media' => 'میڈیا',
+        'section_episodes' => 'ویڈیو اقساط',
+        'section_linked' => 'متعلقہ مواد',
+        'linked_verses' => 'متعلقہ آیات',
+        'linked_hadiths' => 'متعلقہ احادیث',
+        'linked_companions' => 'متعلقہ شخصیات',
+        'linked_articles' => 'متعلقہ مضامین',
+        'section_external_links' => 'بیرونی روابط',
+        'tags_label' => 'ٹیگز اور زمرے',
         'on_this_page' => 'اس صفحے پر',
         'related_events' => 'متعلقہ واقعات',
         'share' => 'شیئر کریں',

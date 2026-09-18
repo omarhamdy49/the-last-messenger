@@ -102,13 +102,21 @@ class CategoryController extends Controller
      *
      * POST /su/portal/v1/admin/categories
      */
-    public function store(StoreCategoryRequest $request): RedirectResponse
+    public function store(StoreCategoryRequest $request): RedirectResponse|JsonResponse
     {
         try {
             $category = $this->categoryService->create(CreateCategoryData::fromRequest($request));
 
             // Log the creation
             $this->logger->logCreate($category, $request->user());
+
+            // Quick-create from other forms (e.g. the Seerah event links tab).
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'data' => ['id' => $category->id, 'slug' => $category->slug, 'name' => $category->getTranslation('name', app()->getLocale()) ?? $category->getTranslation('name', 'ar')],
+                ], 201);
+            }
 
             return redirect()
                 ->route('admin.categories.index')
@@ -118,6 +126,10 @@ class CategoryController extends Controller
                 'user_id' => auth()->id(),
                 'error' => $e->getMessage(),
             ]);
+
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => __('admin.category_operation_failed')], 500);
+            }
 
             return redirect()
                 ->back()

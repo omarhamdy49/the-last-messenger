@@ -1,7 +1,9 @@
 {{--
-    Article Form - Single Page Layout
-    Layout: Sticky Action Bar + Sidebar (aside) + Main Content Tabs
-    Features: Multi-language, WYSIWYG (Quill), Select2, Media Library, TOC, Gallery, References, Statistics, Module Embeds
+    Article form as a clickable-step wizard (create + edit).
+
+    Steps are <x-admin.wizard.panel>s; every field keeps its name, so the regular submit,
+    old() and server-side validation are unchanged. Quick save (window.adminWizard,
+    resources/js/admin/wizard.js) posts the same form over fetch and stays on the page.
 --}}
 
 @props([
@@ -17,6 +19,34 @@
     $isEdit = $article && $article->exists;
     $actionUrl = $isEdit ? route('admin.articles.update', $article) : route('admin.articles.store');
     $localeNames = enabled_content_languages();
+
+    // Steps: key => [icon, error-key prefixes that belong to the step].
+    $stepDefs = [
+        'basics' => ['file-text', ['title', 'slug', 'description', 'excerpt', 'is_ready']],
+        'content' => ['layers', ['content', 'content_blocks', 'summary', 'toc']],
+        'classify' => ['folder-tree', ['thumb', 'thumb_id', 'status', 'scheduled_at', 'hijri_date', 'read_time', 'writer_id', 'category_id', 'additional_categories', 'tags', 'is_featured', 'is_pinned']],
+        'seo' => ['search', ['seo_title', 'seo_description']],
+        'media' => ['images', ['gallery', 'media_items', 'episodes']],
+        'details' => ['library', ['references', 'statistics']],
+        'review' => ['badge-check', []],
+    ];
+    $steps = collect($stepDefs)->map(fn (array $def, string $key): array => [
+        $def[0], __("wizard.article.steps.{$key}.label"), __("wizard.article.steps.{$key}.hint"),
+    ])->all();
+    $stepKeys = array_keys($stepDefs);
+    $totalSteps = count($stepKeys);
+    $matches = fn (string $errorKey, array $prefixes): bool => collect($prefixes)
+        ->contains(fn (string $p): bool => $errorKey === $p || str_starts_with($errorKey, $p.'.'));
+    $serverStepErrors = collect($stepDefs)
+        ->map(fn (array $def): int => collect($errors->keys())->filter(fn (string $k): bool => $matches($k, $def[1]))->count())
+        ->filter()
+        ->all();
+
+    $wizardMessages = collect(['saving', 'saved', 'unsaved', 'no_changes', 'save_failed', 'fix_errors', 'session_expired', 'network_error', 'saved_toast'])
+        ->mapWithKeys(fn (string $k): array => [$k => __("wizard.{$k}")])->all();
+    $publicSlug = $isEdit ? ($article->locales->firstWhere('locale', 'ar')?->slug ?? $article->locales->first()?->slug) : null;
+    $publicUrl = $isEdit && $article->status === 'published' && $publicSlug ? route('public.articles.show', $publicSlug) : null;
+    $statusLabels = collect(['draft', 'pending', 'published', 'scheduled', 'archived'])->mapWithKeys(fn ($s) => [$s => __("articles.status.{$s}")])->all();
 @endphp
 
 @push('styles')
@@ -48,17 +78,13 @@
     /* Editor look + typography: resources/css/admin/rich-text.css (.wysiwyg-field).
        Block editors sit inside a bordered block card, so drop the outer frame. */
     /* The pinned toolbar sits below this page's sticky action bar. */
-    .wysiwyg-field { --wysiwyg-sticky-top: 4.5rem; }
+    .wysiwyg-field { --wysiwyg-sticky-top: 1rem; }
     .wysiwyg-field.block-quill-field .ql-toolbar.ql-snow { border-width: 0 0 1px; border-radius: 0; }
     .wysiwyg-field.block-quill-field .ql-container.ql-snow { border: 0; border-radius: 0; }
     .wysiwyg-field.block-quill-field .ql-editor { min-height: 380px; }
 
     /* Line clamp utility */
     .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-
-    /* Sidebar card */
-    .sidebar-card { transition: box-shadow 0.2s; }
-    .sidebar-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 
     /* Custom scrollbar for tabs */
     .tabs-scroll::-webkit-scrollbar { height: 2px; }
@@ -70,115 +96,48 @@
 <form action="{{ $actionUrl }}"
       method="POST"
       enctype="multipart/form-data"
-      x-data="articleForm(@js($formArticle ?? null), @js($locales))"
+      novalidate
+      x-data="articleForm(@js($formArticle ?? null), @js($locales), @js([
+          'steps' => $stepKeys,
+          'stepErrors' => $serverStepErrors,
+          'isEdit' => $isEdit,
+          'updateUrl' => route('admin.articles.update', '__ID__'),
+          'editUrl' => route('admin.articles.edit', '__ID__'),
+          'messages' => $wizardMessages,
+          'statusLabels' => $statusLabels,
+          'stepLabels' => collect($steps)->map(fn ($s) => $s[1]),
+          'checkLabels' => __('wizard.article.checks'),
+      ]))"
       @submit.prevent="handleSubmit"
       @episodes-selected.window="addEpisodes($event.detail)"
-      class="article-form">
+      class="article-form wz-root">
 
     @csrf
     @if($isEdit) @method('PUT') @endif
 
-    {{-- Unsaved Changes Warning --}}
-    <div x-show="showUnsavedToast" x-cloak
-         x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="opacity-0 translate-y-2"
-         x-transition:enter-end="opacity-100 translate-y-0"
-         x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="opacity-100 translate-y-0"
-         x-transition:leave-end="opacity-0 translate-y-2"
-         class="fixed top-20 end-6 z-50 px-4 py-3 rounded-lg shadow-lg bg-yellow-500 text-white flex items-center gap-3">
-        <i data-lucide="alert-triangle" class="w-5 h-5 flex-shrink-0"></i>
-        <span class="text-sm font-medium">{{ __('common.unsaved_changes') }}</span>
-        <button type="button" @click="showUnsavedToast = false; toastDismissed = true"
-                class="p-0.5 rounded hover:bg-yellow-600 transition-colors flex-shrink-0">
-            <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-    </div>
+    <x-admin.wizard.hero :eyebrow="__('wizard.article.eyebrow')" icon="newspaper" title-expr="formData.title.ar || formData.title[activeLang]" :steps="$steps">
+        <x-slot:meta>
+            <span class="wz-pill" :class="formData.status === 'published' ? 'is-success' : (formData.status === 'scheduled' ? 'is-accent' : 'is-warn')">
+                <span class="wz-dot" aria-hidden="true"></span><span x-text="statusLabels[formData.status] || formData.status"></span>
+            </span>
+            <span class="wz-pill" x-show="selectedText('category_id')" x-cloak><i data-lucide="folder" class="w-3.5 h-3.5" aria-hidden="true"></i><span x-text="selectedText('category_id')"></span></span>
+            <span class="wz-pill" x-show="selectedText('writer_id')" x-cloak><i data-lucide="pen-line" class="w-3.5 h-3.5" aria-hidden="true"></i><span x-text="selectedText('writer_id')"></span></span>
+            @if($isEdit)
+                <span class="wz-pill"><i data-lucide="eye" class="w-3.5 h-3.5" aria-hidden="true"></i>{{ number_format($article->views ?? 0) }}</span>
+                <span class="wz-pill"><i data-lucide="history" class="w-3.5 h-3.5" aria-hidden="true"></i>{{ $article->updated_at?->diffForHumans() }}</span>
+            @endif
+        </x-slot:meta>
+    </x-admin.wizard.hero>
 
-    {{-- ═══════════ STICKY ACTION BAR ═══════════ --}}
-    <x-admin.article.action-bar :article="$article" :isEdit="$isEdit" />
+    <x-admin.wizard.errors />
 
-    {{-- ═══════════ MAIN LAYOUT ═══════════ --}}
-    <div class="flex flex-col lg:flex-row gap-6">
+    <div class="wz-layout">
+        <div class="min-w-0">
 
-        {{-- ==================== SIDEBAR ==================== --}}
-        <x-admin.article.sidebar
-            :article="$article"
-            :formArticle="$formArticle"
-            :categories="$categories"
-            :writers="$writers"
-            :tags="$tags"
-            :currentHijriDate="$currentHijriDate ?? ''"
-        />
-
-        {{-- ==================== MAIN CONTENT ==================== --}}
-        <main class="flex-1 min-w-0 order-1 lg:order-2">
-            <div class="rounded-xl overflow-hidden"
-                 :class="darkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'">
-
-                {{-- Tab Navigation --}}
-                <div class="border-b" :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-                    <nav class="flex gap-1 px-4 pt-1 overflow-x-auto tabs-scroll" role="tablist">
-                        @php
-                            $tabs = [
-                                ['key' => 'main', 'icon' => 'file-text', 'label' => __('articles.tabs.main_info')],
-                                ['key' => 'content', 'icon' => 'layers', 'label' => __('articles.tabs.content')],
-                                ['key' => 'seo', 'icon' => 'search', 'label' => __('articles.tabs.seo_metadata')],
-                                ['key' => 'gallery', 'icon' => 'images', 'label' => __('articles.tabs.gallery')],
-                                ['key' => 'media', 'icon' => 'video', 'label' => __('articles.tabs.media')],
-                                ['key' => 'statistics', 'icon' => 'bar-chart-2', 'label' => __('articles.tabs.statistics_info')],
-                            ];
-                        @endphp
-                        @foreach($tabs as $tab)
-                            <button type="button"
-                                    @click="activeTab = '{{ $tab['key'] }}'"
-                                    :class="activeTab === '{{ $tab['key'] }}'
-                                        ? 'border-b-2 border-[#0056b3] text-[#0056b3] dark:text-[#64CCC5] dark:border-[#64CCC5]'
-                                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'"
-                                    class="px-3 py-3 font-medium text-sm whitespace-nowrap transition-colors flex items-center gap-1.5">
-                                <i data-lucide="{{ $tab['icon'] }}" class="w-4 h-4"></i>
-                                {{ $tab['label'] }}
-                                @if($tab['key'] === 'content')
-                                    <span x-show="getTotalBlockCount() > 0"
-                                          class="px-1.5 py-0.5 text-xs rounded-full bg-[#64CCC5] text-white"
-                                          x-text="getTotalBlockCount()"></span>
-                                @elseif($tab['key'] === 'gallery')
-                                    <span x-show="formData.gallery.length > 0"
-                                          class="px-1.5 py-0.5 text-xs rounded-full bg-[#218838] text-white"
-                                          x-text="formData.gallery.length"></span>
-                                @elseif($tab['key'] === 'media')
-                                    <span x-show="formData.media_items.length > 0"
-                                          class="px-1.5 py-0.5 text-xs rounded-full bg-[#0056b3] text-white"
-                                          x-text="formData.media_items.length"></span>
-                                @endif
-                            </button>
-                        @endforeach
-                    </nav>
-                </div>
-
-                {{-- Tab Content --}}
-                <div class="p-5">
-
-                    {{-- ═══════ TAB: CONTENT (Multi-Language Block Builder) ═══════ --}}
-                    <div x-show="activeTab === 'main'" x-transition class="space-y-5">
-
-                        {{-- Language Sub-Tabs --}}
-                        <div class="flex gap-2 overflow-x-auto tabs-scroll pb-1">
-                            @foreach($locales as $locale)
-                                <button type="button"
-                                        @click="activeLang = '{{ $locale }}'"
-                                        :class="activeLang === '{{ $locale }}'
-                                            ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-sm'
-                                            : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')"
-                                        class="px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5">
-                                    {{ strtoupper($locale) }}
-                                    <span x-show="formData.is_ready?.{{ $locale }}"
-                                          class="w-2 h-2 bg-green-400 rounded-full inline-block"></span>
-                                </button>
-                            @endforeach
-                        </div>
-
-                        {{-- Per-Locale Content Panels --}}
+            {{-- ═══════ 1. BASICS ═══════ --}}
+            <x-admin.wizard.panel key="basics" :index="1" :total="$totalSteps" icon="file-text"
+                :title="__('wizard.article.steps.basics.label')" :description="__('wizard.article.steps.basics.desc')">
+                <x-slot:actions><x-admin.wizard.langs :languages="$localeNames" model="activeLang" /></x-slot:actions>
                         @foreach($locales as $locale)
                         <div x-show="activeLang === '{{ $locale }}'" x-transition class="space-y-4">
 
@@ -260,29 +219,12 @@
                             </label>
                         </div>
                         @endforeach
-                    </div>
+            </x-admin.wizard.panel>
 
-                    {{-- ═══════ TAB: CONTENT (Block Builder) ═══════ --}}
-                    <div x-show="activeTab === 'content'" x-transition class="space-y-5">
-
-                        {{-- Language Sub-Tabs --}}
-                        <div class="flex gap-2 overflow-x-auto tabs-scroll pb-1">
-                            @foreach($locales as $locale)
-                                <button type="button"
-                                        @click="activeLang = '{{ $locale }}'"
-                                        :class="activeLang === '{{ $locale }}'
-                                            ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-sm'
-                                            : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')"
-                                        class="px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5">
-                                    {{ strtoupper($locale) }}
-                                    <span x-show="getBlocks('{{ $locale }}').length > 0"
-                                          class="px-1.5 py-0.5 text-xs rounded-full bg-white/20"
-                                          x-text="getBlocks('{{ $locale }}').length"></span>
-                                </button>
-                            @endforeach
-                        </div>
-
-                        {{-- Per-Locale Content Panels --}}
+            {{-- ═══════ 2. CONTENT ═══════ --}}
+            <x-admin.wizard.panel key="content" :index="2" :total="$totalSteps" icon="layers"
+                :title="__('wizard.article.steps.content.label')" :description="__('wizard.article.steps.content.desc')">
+                <x-slot:actions><x-admin.wizard.langs :languages="$localeNames" model="activeLang" /></x-slot:actions>
                         @foreach($locales as $locale)
                         <div x-show="activeLang === '{{ $locale }}'" x-transition class="space-y-4">
 
@@ -527,24 +469,27 @@
                             </div>
                         </div>
                         @endforeach
-                    </div>
+            </x-admin.wizard.panel>
 
-                    {{-- ═══════ TAB: SEO ═══════ --}}
-                    <div x-show="activeTab === 'seo'" x-transition class="space-y-5">
+            {{-- ═══════ 3. CLASSIFY ═══════ --}}
+            <x-admin.wizard.panel key="classify" :index="3" :total="$totalSteps" icon="folder-tree"
+                :title="__('wizard.article.steps.classify.label')" :description="__('wizard.article.steps.classify.desc')">
+                <div class="wz-classify">
+                    <x-admin.article.sidebar
+                        :article="$article"
+                        :formArticle="$formArticle"
+                        :categories="$categories"
+                        :writers="$writers"
+                        :tags="$tags"
+                        :currentHijriDate="$currentHijriDate ?? ''"
+                    />
+                </div>
+            </x-admin.wizard.panel>
 
-                        {{-- Language Tabs for SEO --}}
-                        <div class="flex gap-2 overflow-x-auto tabs-scroll pb-1">
-                            @foreach($locales as $locale)
-                            <button type="button" @click="activeLang = '{{ $locale }}'"
-                                    :class="activeLang === '{{ $locale }}'
-                                        ? 'bg-gradient-to-r from-[#0056b3] to-[#218838] text-white shadow-sm'
-                                        : (darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200')"
-                                    class="px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap">
-                                {{ strtoupper($locale) }}
-                            </button>
-                            @endforeach
-                        </div>
-
+            {{-- ═══════ 4. SEO ═══════ --}}
+            <x-admin.wizard.panel key="seo" :index="4" :total="$totalSteps" icon="search"
+                :title="__('wizard.article.steps.seo.label')" :description="__('wizard.article.steps.seo.desc')">
+                <x-slot:actions><x-admin.wizard.langs :languages="$localeNames" model="activeLang" /></x-slot:actions>
                         @foreach($locales as $locale)
                         <div x-show="activeLang === '{{ $locale }}'" x-transition class="space-y-5">
 
@@ -618,17 +563,19 @@
                             </div>
                         </div>
                         @endforeach
-                    </div>
+            </x-admin.wizard.panel>
 
-                    {{-- ═══════ TAB: GALLERY ═══════ --}}
-                    <div x-show="activeTab === 'gallery'" x-transition class="space-y-4">
+            {{-- ═══════ 5. MEDIA ═══════ --}}
+            <x-admin.wizard.panel key="media" :index="5" :total="$totalSteps" icon="images"
+                :title="__('wizard.article.steps.media.label')" :description="__('wizard.article.steps.media.desc')">
+                <div class="wz-section">
                         <div class="flex items-center justify-between">
                             <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
                                 {{ __('articles.help.gallery') }}
                             </p>
                             <button type="button"
                                     @click="$dispatch('open-media-library', { target: 'gallery', multiple: true })"
-                                    class="px-4 py-2 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white rounded-lg hover:shadow-lg transition-all flex items-center gap-2 text-sm">
+                                    class="wz-btn is-soft">
                                 <i data-lucide="plus" class="w-4 h-4"></i>
                                 {{ __('articles.fields.add_image') }}
                             </button>
@@ -651,22 +598,20 @@
                         </div>
 
                         <div x-show="formData.gallery.length === 0"
-                             class="text-center py-16 border-2 border-dashed rounded-lg"
+                             class="wz-empty"
                              :class="darkMode ? 'border-gray-700' : 'border-gray-300'">
                             <i data-lucide="images" class="w-12 h-12 mx-auto mb-3 text-gray-400"></i>
                             <p class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ __('articles.empty.gallery') }}</p>
                         </div>
-                    </div>
-
-                    {{-- ═══════ TAB: MEDIA ═══════ --}}
-                    <div x-show="activeTab === 'media'" x-transition class="space-y-4">
+                </div>
+                <div class="wz-section">
                         <div class="flex items-center justify-between">
                             <p class="text-sm" :class="darkMode ? 'text-gray-400' : 'text-gray-600'">
                                 {{ __('articles.help.media') }}
                             </p>
                             <button type="button"
                                     @click="$dispatch('open-media-library', { target: 'media_items', multiple: true })"
-                                    class="px-4 py-2 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white rounded-lg hover:shadow-lg transition-all flex items-center gap-2 text-sm">
+                                    class="wz-btn is-soft">
                                 <i data-lucide="plus" class="w-4 h-4"></i>
                                 {{ __('articles.fields.add_media') }}
                             </button>
@@ -696,7 +641,7 @@
                         </div>
 
                         <div x-show="formData.media_items.length === 0"
-                             class="text-center py-16 border-2 border-dashed rounded-lg"
+                             class="wz-empty"
                              :class="darkMode ? 'border-gray-700' : 'border-gray-300'">
                             <i data-lucide="video" class="w-12 h-12 mx-auto mb-3 text-gray-400"></i>
                             <p class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ __('articles.empty.media') }}</p>
@@ -717,7 +662,7 @@
                                     </p>
                                 </div>
                                 <button type="button" @click="$dispatch('open-episode-picker')"
-                                        class="px-4 py-2 bg-gradient-to-r from-[#0056b3] to-[#218838] text-white rounded-lg hover:shadow-lg transition-all flex items-center gap-2 text-sm shrink-0">
+                                        class="wz-btn is-soft shrink-0">
                                     <i data-lucide="list-video" class="w-4 h-4"></i>
                                     {{ __('articles.actions.assign_episodes') }}
                                 </button>
@@ -760,16 +705,19 @@
                             </div>
 
                             <div x-show="formData.episodes.length === 0"
-                                 class="text-center py-10 border-2 border-dashed rounded-lg"
+                                 class="wz-empty"
                                  :class="darkMode ? 'border-gray-700' : 'border-gray-300'">
                                 <i data-lucide="list-video" class="w-10 h-10 mx-auto mb-2 text-gray-400"></i>
                                 <p class="text-sm" :class="darkMode ? 'text-gray-500' : 'text-gray-400'">{{ __('articles.empty.episodes') }}</p>
                             </div>
                         </div>
-                    </div>
+                </div>
+            </x-admin.wizard.panel>
 
-                    {{-- ═══════ TAB: STATISTICS & REFERENCES ═══════ --}}
-                    <div x-show="activeTab === 'statistics'" x-transition class="space-y-6">
+            {{-- ═══════ 6. DETAILS ═══════ --}}
+            <x-admin.wizard.panel key="details" :index="6" :total="$totalSteps" icon="library"
+                :title="__('wizard.article.steps.details.label')" :description="__('wizard.article.steps.details.desc')">
+                <div class="wz-section">
                         <x-admin.repeatable-field
                             name="references"
                             :label="__('articles.fields.references')"
@@ -798,130 +746,98 @@
                             :emptyMessage="__('common.no_items')"
                             :help="__('articles.help.statistics')"
                         />
-                    </div>
-
                 </div>
-            </div>
-        </main>
+            </x-admin.wizard.panel>
 
+            {{-- ═══════ 7. REVIEW ═══════ --}}
+            <x-admin.wizard.panel key="review" :index="7" :total="$totalSteps" icon="badge-check"
+                :title="__('wizard.article.steps.review.label')" :description="__('wizard.article.steps.review.desc')">
+                <div class="grid gap-3 sm:grid-cols-3">
+                    <div class="wz-card p-4 !shadow-none">
+                        <p class="text-2xl font-extrabold tabular-nums" :class="reviewCount('required') ? 'text-red-600' : 'text-[color:var(--wz-success)]'" x-text="reviewCount('required')"></p>
+                        <p class="wz-help !mt-1">{{ __('wizard.required') }}</p>
+                    </div>
+                    <div class="wz-card p-4 !shadow-none">
+                        <p class="text-2xl font-extrabold tabular-nums text-[color:var(--wz-warn)]" x-text="reviewCount('recommended')"></p>
+                        <p class="wz-help !mt-1">{{ __('wizard.recommended') }}</p>
+                    </div>
+                    <div class="wz-card p-4 !shadow-none">
+                        <p class="text-2xl font-extrabold tabular-nums text-[color:var(--wz-success)]" x-text="reviewChecks().filter((c) => c.ok).length"></p>
+                        <p class="wz-help !mt-1">{{ __('wizard.ok') }}</p>
+                    </div>
+                </div>
+
+                <p class="wz-pill !min-h-9 !px-4 w-fit" :class="formData.status === 'published' ? 'is-success' : 'is-warn'">
+                    <i data-lucide="info" class="w-4 h-4" aria-hidden="true"></i>
+                    <span x-text="formData.status === 'published' ? @js(__('wizard.published_note')) : @js(__('wizard.draft_note'))"></span>
+                </p>
+
+                <div class="wz-checks">
+                    <template x-for="check in reviewChecks()" :key="check.key">
+                        <button type="button" class="wz-check" :class="check.ok ? 'is-ok' : (check.level === 'required' ? 'is-required' : 'is-warn')" @click="goTo(check.step)">
+                            <span class="wz-check-icon">
+                                <span x-show="check.ok"><i data-lucide="check" aria-hidden="true"></i></span>
+                                <span x-show="!check.ok && check.level === 'required'"><i data-lucide="x" aria-hidden="true"></i></span>
+                                <span x-show="!check.ok && check.level !== 'required'"><i data-lucide="lightbulb" aria-hidden="true"></i></span>
+                            </span>
+                            <span class="min-w-0">
+                                <span class="wz-check-title block" x-text="check.label"></span>
+                                <span class="wz-check-detail block" x-text="check.ok ? @js(__('wizard.ok')) : (check.level === 'required' ? @js(__('wizard.required')) : @js(__('wizard.recommended')))"></span>
+                            </span>
+                            <span class="wz-check-go" x-text="stepLabels[check.step] || check.step"></span>
+                        </button>
+                    </template>
+                </div>
+            </x-admin.wizard.panel>
+
+            <x-admin.wizard.command-bar :preview-url="$isEdit ? route('admin.articles.show', $article) : null" :total="$totalSteps" />
+        </div>
+
+        {{-- ═══════ RAIL ═══════ --}}
+        <aside class="wz-rail" aria-label="{{ __('wizard.summary') }}">
+            <div class="wz-card wz-rail-card">
+                <p class="wz-rail-title"><i data-lucide="panel-top" aria-hidden="true"></i>{{ __('wizard.summary') }}</p>
+                <div class="wz-summary-media">
+                    <template x-if="thumbnailPreview"><img :src="thumbnailPreview" alt=""></template>
+                    <template x-if="!thumbnailPreview"><i data-lucide="image" class="w-8 h-8" aria-hidden="true"></i></template>
+                </div>
+                <p class="mt-3 font-bold leading-snug break-words" :class="darkMode ? 'text-white' : 'text-slate-900'" x-text="formData.title.ar || @js(__('wizard.untitled'))"></p>
+                <dl class="wz-kv">
+                    <div><dt>{{ __('wizard.article.rail.status') }}</dt><dd x-text="statusLabels[formData.status] || formData.status"></dd></div>
+                    <div><dt>{{ __('wizard.article.rail.writer') }}</dt><dd x-text="selectedText('writer_id') || @js(__('wizard.not_set'))"></dd></div>
+                    <div><dt>{{ __('wizard.article.rail.category') }}</dt><dd x-text="selectedText('category_id') || @js(__('wizard.not_set'))"></dd></div>
+                    <div><dt>{{ __('wizard.article.rail.blocks') }}</dt><dd class="tabular-nums" x-text="getTotalBlockCount()"></dd></div>
+                    <div><dt>{{ __('wizard.article.rail.gallery') }}</dt><dd class="tabular-nums" x-text="formData.gallery.length"></dd></div>
+                    <div><dt>{{ __('wizard.article.rail.episodes') }}</dt><dd class="tabular-nums" x-text="formData.episodes.length"></dd></div>
+                </dl>
+            </div>
+
+            <div class="wz-card wz-rail-card">
+                <p class="wz-rail-title"><i data-lucide="languages" aria-hidden="true"></i>{{ __('wizard.languages') }}</p>
+                <ul class="grid gap-2">
+                    @foreach($localeNames as $code => $langLabel)
+                        <li class="flex items-center justify-between gap-2 text-sm">
+                            <button type="button" class="font-semibold hover:underline" :class="darkMode ? 'text-slate-200' : 'text-slate-700'" @click="activeLang = '{{ $code }}'; goTo('basics')">{{ $langLabel }}</button>
+                            <span class="wz-pill !min-h-6" :class="formData.is_ready['{{ $code }}'] ? 'is-success' : (langFilled('{{ $code }}') ? 'is-warn' : '')">
+                                <span class="wz-dot" aria-hidden="true"></span>
+                                <span x-text="formData.is_ready['{{ $code }}'] ? @js(__('wizard.show.ready')) : (langFilled('{{ $code }}') ? @js(__('wizard.show.not_ready')) : @js(__('wizard.show.missing')))"></span>
+                            </span>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+
+            <div class="wz-card wz-rail-card grid gap-2">
+                @if($publicUrl)
+                    <a href="{{ $publicUrl }}" target="_blank" rel="noopener" class="wz-btn w-full"><i data-lucide="external-link" aria-hidden="true"></i>{{ __('wizard.open_public') }}</a>
+                @endif
+                <a href="{{ route('admin.articles.index') }}" class="wz-btn is-ghost w-full"><i data-lucide="list" aria-hidden="true"></i>{{ __('wizard.back_to_list') }}</a>
+            </div>
+        </aside>
     </div>
 </form>
 
-{{-- ═══════════ EPISODE PICKER MODAL ═══════════
-     Lives outside the <form> like the module selector, so it hands its
-     selection back through a window event rather than reaching into the
-     form's Alpine scope. Server-side paginated: a synced channel runs to
-     hundreds of episodes, so the list is never fetched whole. --}}
-<div x-data="episodePicker()" x-show="show" x-cloak
-     @open-episode-picker.window="open()"
-     @keydown.escape.window="show && close()"
-     class="fixed inset-0 z-50 flex items-center justify-center p-4"
-     role="dialog" aria-modal="true">
-    <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="close()"></div>
-
-    <div class="relative w-full max-w-3xl max-h-[85vh] rounded-xl shadow-2xl flex flex-col overflow-hidden"
-         :class="darkMode ? 'bg-gray-800' : 'bg-white'" @click.stop>
-
-        {{-- Header --}}
-        <div class="flex items-center justify-between p-4 border-b shrink-0"
-             :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-            <h3 class="font-bold" :class="darkMode ? 'text-white' : 'text-gray-900'">
-                {{ __('articles.actions.assign_episodes') }}
-            </h3>
-            <button type="button" @click="close()" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                    aria-label="{{ __('articles.public.close') }}">
-                <i data-lucide="x" class="w-5 h-5"></i>
-            </button>
-        </div>
-
-        {{-- Search + filter --}}
-        <div class="p-4 grid gap-3 sm:grid-cols-[1fr_14rem] shrink-0 border-b"
-             :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-            <div class="relative">
-                <i data-lucide="search" class="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none"></i>
-                <input type="search" x-model.debounce.300ms="q" @input="page = 1; fetch()"
-                       placeholder="{{ __('articles.placeholders.search_episodes') }}"
-                       class="w-full ps-9 pe-3 py-2 rounded-lg border text-sm"
-                       :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'">
-            </div>
-            <select x-model="program" @change="page = 1; fetch()"
-                    aria-label="{{ __('articles.fields.program') }}"
-                    class="w-full px-3 py-2 rounded-lg border text-sm"
-                    :class="darkMode ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-gray-300'">
-                <option value="">{{ __('articles.fields.all_programs') }}</option>
-                <template x-for="p in programs" :key="p.id">
-                    <option :value="p.id" x-text="p.label"></option>
-                </template>
-            </select>
-        </div>
-
-        {{-- Results --}}
-        <div class="flex-1 overflow-y-auto p-4 space-y-2 min-h-[16rem]">
-            <template x-if="loading">
-                <div class="py-16 text-center text-sm text-gray-500">{{ __('articles.public.loading') }}</div>
-            </template>
-
-            <template x-if="!loading && rows.length === 0">
-                <div class="py-16 text-center">
-                    <i data-lucide="list-video" class="w-10 h-10 mx-auto mb-2 text-gray-400"></i>
-                    <p class="text-sm text-gray-500">{{ __('articles.empty.episodes_search') }}</p>
-                </div>
-            </template>
-
-            <template x-for="row in rows" :key="row.id">
-                <label class="flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-colors"
-                       :class="isPicked(row.id)
-                            ? 'border-[#0056b3] bg-[#0056b3]/5'
-                            : (darkMode ? 'border-gray-700 hover:bg-gray-700/50' : 'border-gray-200 hover:bg-gray-50')">
-                    <input type="checkbox" class="w-4 h-4 shrink-0"
-                           :checked="isPicked(row.id)" @change="toggle(row)">
-                    <img :src="row.thumb" x-show="row.thumb" alt=""
-                         class="w-24 h-14 rounded object-cover bg-gray-200 dark:bg-gray-700 shrink-0">
-                    <span class="min-w-0 flex-1">
-                        <span class="block text-sm font-medium truncate" :class="darkMode ? 'text-white' : 'text-gray-900'" x-text="row.title"></span>
-                        <span class="block text-xs text-gray-500 truncate">
-                            <span x-text="row.program"></span>
-                            <span x-show="row.season">· S<span x-text="row.season"></span></span>
-                            <span x-show="row.episode">E<span x-text="row.episode"></span></span>
-                        </span>
-                    </span>
-                    {{-- Unpublished episodes stay pickable but are flagged: the
-                         reader filters them out until they go live. --}}
-                    <span x-show="!row.is_published"
-                          class="shrink-0 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                        {{ __('articles.status.draft') }}
-                    </span>
-                </label>
-            </template>
-        </div>
-
-        {{-- Pagination + confirm --}}
-        <div class="p-4 border-t flex items-center justify-between gap-3 shrink-0"
-             :class="darkMode ? 'border-gray-700' : 'border-gray-200'">
-            <div class="flex items-center gap-2">
-                <button type="button" @click="go(-1)" :disabled="meta.current_page <= 1"
-                        class="px-3 py-1.5 rounded-lg border text-sm disabled:opacity-40"
-                        :class="darkMode ? 'border-gray-600' : 'border-gray-300'">
-                    {{ __('articles.public.previous') }}
-                </button>
-                <span class="text-xs text-gray-500 tabular-nums">
-                    <span x-text="meta.current_page"></span> / <span x-text="meta.last_page || 1"></span>
-                </span>
-                <button type="button" @click="go(1)" :disabled="meta.current_page >= (meta.last_page || 1)"
-                        class="px-3 py-1.5 rounded-lg border text-sm disabled:opacity-40"
-                        :class="darkMode ? 'border-gray-600' : 'border-gray-300'">
-                    {{ __('articles.public.next') }}
-                </button>
-            </div>
-
-            <button type="button" @click="confirm()" :disabled="picked.length === 0"
-                    class="px-5 py-2 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-[#0056b3] to-[#218838] disabled:opacity-40">
-                {{ __('articles.actions.add_selected') }}
-                <span x-show="picked.length > 0">(<span x-text="picked.length"></span>)</span>
-            </button>
-        </div>
-    </div>
-</div>
+<x-admin.episode-picker-modal />
 
 {{-- Cross-module picker now lives in a shared component so other screens reuse it. --}}
 <x-admin.module-selector-modal />
@@ -959,7 +875,7 @@ window.tocManager = function(config) {
             let html = '';
 
             // Find the content tab, then the locale panel within it
-            const contentTab = document.querySelector('[x-show="activeTab === \'content\'"]');
+            const contentTab = document.querySelector('[data-wizard-step="content"]');
             if (contentTab) {
                 // Get all block quill editors visible in the current locale
                 const editors = contentTab.querySelectorAll('.block-quill .ql-editor');
@@ -1040,15 +956,28 @@ window.repeatableField = function(config) {
 };
 
 // Article Form Alpine Component
-function articleForm(article, locales) {
+function articleForm(article, locales, wizard) {
     return {
-        activeTab: 'main',
+        ...window.adminWizard({
+            steps: wizard.steps,
+            isEdit: wizard.isEdit,
+            updateUrlTemplate: wizard.updateUrl,
+            editUrlTemplate: wizard.editUrl,
+            locales,
+            langProp: 'activeLang',
+            messages: wizard.messages,
+            stepComplete: (form, key) => form.isStepComplete(key),
+            beforeSave: (form) => locales.forEach((locale) => { form.syncAllBlockQuills(locale); form.syncContentBlocks(locale); }),
+            // A library thumbnail is copied on save; don't copy it again on the next quick save.
+            afterSave: (form) => { form.formData.thumb_id = null; form.summaryTick++; },
+        }),
+        statusLabels: wizard.statusLabels,
+        stepLabels: wizard.stepLabels,
+        checkLabels: wizard.checkLabels,
+        summaryTick: 0,
         activeLang: 'ar',
         darkMode: window.resolveDarkMode(),
         hasUnsavedChanges: false,
-        showUnsavedToast: false,
-        toastDismissed: false,
-        _unsavedTimer: null,
         thumbnailPreview: article?.thumb ? '{{ asset("storage") }}/' + article.thumb : null,
         manualSlugEdit: {},
         quillEditors: {},
@@ -1079,6 +1008,9 @@ function articleForm(article, locales) {
         },
 
         init() {
+            this.stepErrors = wizard.stepErrors ?? {};
+            this.wizardInit();
+
             locales.forEach(locale => {
                 this.formData.title[locale] = article?.locales?.[locale]?.title || '';
                 this.formData.slug[locale] = article?.locales?.[locale]?.slug || '';
@@ -1108,24 +1040,18 @@ function articleForm(article, locales) {
             window.addEventListener('module-block-add', (e) => this.addModuleBlock(e.detail));
             window.addEventListener('module-inline-insert', (e) => this.insertModuleInline(e.detail));
 
-            // Watch for unsaved changes and show toast with delay
-            this.$watch('hasUnsavedChanges', (val) => {
-                clearTimeout(this._unsavedTimer);
-                if (val && !this.toastDismissed) {
-                    this._unsavedTimer = setTimeout(() => {
-                        this.showUnsavedToast = true;
-                        this.$nextTick(() => lucide.createIcons());
-                    }, 2000);
-                } else if (!val) {
-                    this.showUnsavedToast = false;
-                    this.toastDismissed = false;
-                }
+            // Legacy flag set by the block editor: forward it to the wizard's dirty state.
+            this.$watch('hasUnsavedChanges', (value) => {
+                if (value) { this.markDirty(); this.summaryTick++; this.hasUnsavedChanges = false; }
             });
+            ['formData.gallery', 'formData.media_items', 'formData.episodes'].forEach((key) =>
+                this.$watch(key, () => { this.markDirty(); this.summaryTick++; }));
+            const form = this.wizardForm();
+            ['input', 'change', 'wizard:dirty'].forEach((type) => form?.addEventListener(type, () => { this.summaryTick++; }));
 
             this.$nextTick(() => {
                 this.initializeSelect2();
                 this.initializeRichText();
-                this.setupUnsavedChangesWarning();
                 locales.forEach(locale => this.syncContentBlocks(locale));
                 lucide.createIcons();
             });
@@ -1303,10 +1229,12 @@ function articleForm(article, locales) {
             const dir = document.documentElement.dir || 'rtl';
             $('.select2-writer, .select2-category, .select2-categories, .select2-tags').select2({
                 theme: 'default',
+                // The step is display:none at init, so Select2 cannot measure it.
+                width: '100%',
                 placeholder: function() { return $(this).data('placeholder') || '{{ __("common.select") }}...'; },
                 allowClear: true,
                 dir: dir
-            });
+            }).on('select2:select select2:unselect select2:clear', () => { this.markDirty(); this.summaryTick++; });
         },
 
         initializeRichText() {
@@ -1422,17 +1350,71 @@ function articleForm(article, locales) {
 
         removeMediaItem(index) { this.formData.media_items.splice(index, 1); this.hasUnsavedChanges = true; },
 
-        setupUnsavedChangesWarning() {
-            window.addEventListener('beforeunload', (e) => {
-                if (this.hasUnsavedChanges) { e.preventDefault(); e.returnValue = ''; }
-            });
+        // ── Wizard: summary, completeness, review ──
+        selectedText(name) {
+            void this.summaryTick;
+            const el = this.$root.querySelector(`select[name="${name}"]`);
+            return el?.value ? (el.selectedOptions?.[0]?.textContent ?? '').trim() : '';
         },
 
-        saveDraft() {
-            this.formData.status = 'draft';
-            const statusEl = this.$el.querySelector('select[name="status"]');
-            if (statusEl) statusEl.value = 'draft';
-            this.handleSubmit();
+        fieldValue(name) {
+            void this.summaryTick;
+            const el = this.$root.querySelector(`[name="${name}"]`);
+            return String(el?.value ?? '').trim();
+        },
+
+        selectedCount(name) {
+            void this.summaryTick;
+            return this.$root.querySelector(`select[name="${name}"]`)?.selectedOptions?.length ?? 0;
+        },
+
+        filledRows(prefix) {
+            void this.summaryTick;
+            return [...this.$root.querySelectorAll(`[name^="${prefix}["]`)]
+                .some((el) => el.type !== 'hidden' && String(el.value).trim() !== '');
+        },
+
+        langFilled(code) {
+            return (this.formData.title?.[code] ?? '').trim() !== '';
+        },
+
+        contentFilled(locale) {
+            void this.summaryTick;
+            return (this.contentBlocks[locale] || []).some((block) => block.type !== 'wysiwyg'
+                || /module-embed|<img|<iframe/.test(block.content || '')
+                || (block.content || '').replace(/<[^>]*>/g, '').trim() !== '');
+        },
+
+        isStepComplete(key) {
+            switch (key) {
+                case 'basics': return this.langFilled('ar');
+                case 'content': return this.contentFilled('ar');
+                case 'classify': return !!this.thumbnailPreview && this.fieldValue('category_id') !== '';
+                case 'seo': return !!(this.formData.seo_title.ar || this.formData.seo_description.ar);
+                case 'media': return this.formData.gallery.length + this.formData.media_items.length + this.formData.episodes.length > 0;
+                case 'details': return this.filledRows('references') || this.filledRows('statistics');
+                default: return !!this.visited[key];
+            }
+        },
+
+        reviewChecks() {
+            void this.step;
+            return [
+                { key: 'title', step: 'basics', level: 'required', ok: this.langFilled('ar') },
+                { key: 'content', step: 'content', level: 'required', ok: this.contentFilled('ar') },
+                { key: 'ready', step: 'basics', level: 'recommended', ok: Object.values(this.formData.is_ready).some(Boolean) },
+                { key: 'thumb', step: 'classify', level: 'recommended', ok: !!this.thumbnailPreview },
+                { key: 'category', step: 'classify', level: 'recommended', ok: this.fieldValue('category_id') !== '' },
+                { key: 'writer', step: 'classify', level: 'recommended', ok: this.fieldValue('writer_id') !== '' },
+                { key: 'tags', step: 'classify', level: 'recommended', ok: this.selectedCount('tags[]') > 0 },
+                { key: 'excerpt', step: 'basics', level: 'recommended', ok: !!(this.formData.excerpt.ar || '').trim() },
+                { key: 'seo', step: 'seo', level: 'recommended', ok: !!(this.formData.seo_title.ar || '').trim() },
+                { key: 'references', step: 'details', level: 'recommended', ok: this.filledRows('references') },
+            ].map((check) => ({ ...check, label: this.checkLabels[check.key] ?? check.key }));
+        },
+
+        reviewCount(level) {
+            return this.reviewChecks().filter((check) => !check.ok && check.level === level).length;
         },
 
         handleSubmit() {
@@ -1442,6 +1424,8 @@ function articleForm(article, locales) {
                 this.syncContentBlocks(locale);
             });
             this.hasUnsavedChanges = false;
+            this.dirty = false;
+            this.$el.dataset.wizardSubmitting = '1';
             this.$el.submit();
         }
     };
@@ -1449,76 +1433,5 @@ function articleForm(article, locales) {
 
 // Module Selector Alpine Component
 // moduleSelector() moved to components/admin/module-selector-modal.blade.php
-function episodePicker() {
-    return {
-        show: false,
-        loading: false,
-        q: '',
-        program: '',
-        programs: [],
-        rows: [],
-        picked: [],
-        page: 1,
-        meta: { current_page: 1, last_page: 1, total: 0 },
-        get darkMode() { return document.documentElement.classList.contains('dark'); },
-
-        open() {
-            this.show = true;
-            this.picked = [];
-            if (this.programs.length === 0) this.loadPrograms();
-            this.fetch();
-        },
-
-        close() { this.show = false; },
-
-        async loadPrograms() {
-            try {
-                const res = await fetch('{{ route('admin.articles.modules.episode-programs') }}', { headers: { 'Accept': 'application/json' } });
-                this.programs = (await res.json()).data || [];
-            } catch (e) { this.programs = []; }
-        },
-
-        async fetch() {
-            this.loading = true;
-            try {
-                const url = new URL('{{ route('admin.articles.modules.episodes') }}', window.location.origin);
-                url.searchParams.set('page', this.page);
-                if (this.q) url.searchParams.set('q', this.q);
-                if (this.program) url.searchParams.set('program', this.program);
-
-                const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
-                const json = await res.json();
-                this.rows = json.data || [];
-                this.meta = json.meta || { current_page: 1, last_page: 1, total: 0 };
-            } catch (e) {
-                this.rows = [];
-            } finally {
-                this.loading = false;
-                this.$nextTick(() => window.lucide?.createIcons());
-            }
-        },
-
-        go(delta) {
-            const next = this.page + delta;
-            if (next < 1 || next > (this.meta.last_page || 1)) return;
-            this.page = next;
-            this.fetch();
-        },
-
-        isPicked(id) { return this.picked.some(e => e.id === id); },
-
-        // Selection survives paging and re-searching, so an editor can gather
-        // episodes from several pages before confirming once.
-        toggle(row) {
-            const i = this.picked.findIndex(e => e.id === row.id);
-            i === -1 ? this.picked.push(row) : this.picked.splice(i, 1);
-        },
-
-        confirm() {
-            window.dispatchEvent(new CustomEvent('episodes-selected', { detail: this.picked }));
-            this.close();
-        },
-    };
-}
 </script>
 @endpush

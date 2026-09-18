@@ -839,6 +839,31 @@ class ArticleRepository
     }
 
     /**
+     * Paginated picker query: title search (any locale), category (primary or
+     * additional), status, and already-picked ids excluded.
+     *
+     * @param  list<int>  $excludeIds
+     */
+    public function paginateForPicker(string $term, int $categoryId, string $status, array $excludeIds, int $page, int $perPage = 12): LengthAwarePaginator
+    {
+        return Article::query()
+            ->select(['id', 'status', 'category_id', 'created_at'])
+            ->with([
+                'locales:id,article_id,locale,title',
+                'category:id',
+                'category.translations:id,category_id,locale,name',
+            ])
+            ->when($term !== '', fn (Builder $q) => $q->whereHas('locales', fn (Builder $l) => $l->where('title', 'LIKE', "%{$term}%")))
+            ->when($categoryId > 0, fn (Builder $q) => $q->where(fn (Builder $inner) => $inner
+                ->where('category_id', $categoryId)
+                ->orWhereHas('categories', fn (Builder $c) => $c->where('categories.id', $categoryId))))
+            ->when(in_array($status, ['draft', 'published', 'scheduled', 'archived'], true), fn (Builder $q) => $q->where('status', $status))
+            ->when($excludeIds !== [], fn (Builder $q) => $q->whereNotIn('id', $excludeIds))
+            ->orderByDesc('created_at')
+            ->paginate(perPage: $perPage, page: $page);
+    }
+
+    /**
      * Search articles for AJAX selectors (series article picker, SeerahEvent form).
      *
      * @param  array<int>  $excludeIds

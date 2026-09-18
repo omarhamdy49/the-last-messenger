@@ -12,8 +12,8 @@ use Illuminate\Support\Facades\Schema;
  * translations — created in foreign-key order, in their final shape.
  *
  * `seerah_events.location_id` is added by 2026_08_18_000003, because `locations`
- * does not exist yet at this point. The gallery and media link tables follow in
- * 2026_03_09_200000, once `media` exists.
+ * does not exist yet at this point. The gallery, media and cross-module link
+ * tables follow in 2026_08_18_000004, once every table they reference exists.
  *
  * Status and era are plain strings: their allowed values are owned by the
  * SeerahEventStatus and EventEra enums, not by the database.
@@ -89,8 +89,10 @@ return new class extends Migration
             $table->longText('content')->nullable();
             $table->text('dispute_note')->nullable();
             $table->boolean('is_ready')->default(false);
-            $table->json('metadata')->nullable(); // [{key, value}]
-            $table->json('sources')->nullable();  // [{title, author, reference}]
+            $table->json('metadata')->nullable();       // [{key, value}]
+            $table->json('sources')->nullable();        // [{title, author, reference}]
+            $table->json('seo_metadata')->nullable();   // {title, description} — same shape as article_locale
+            $table->json('external_links')->nullable(); // [{title, url}]
             $table->timestamps();
 
             $table->unique(['event_id', 'locale'], 'set_event_locale_uq');

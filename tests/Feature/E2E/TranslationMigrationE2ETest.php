@@ -380,7 +380,7 @@ class TranslationMigrationE2ETest extends TestCase
         $migrations = \DB::table('migrations')
             ->whereIn('migration', [
                 '2025_10_27_130000_create_seerah_tables',
-                '2026_03_09_200000_create_seerah_events_gallery_and_media_tables',
+                '2026_08_18_000004_create_seerah_event_relation_tables',
                 '2026_03_10_100000_create_blog_translation_tables',
                 '2026_03_10_100003_create_phase_4_translation_tables',
             ])

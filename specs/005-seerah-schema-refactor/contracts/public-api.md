@@ -46,8 +46,10 @@ a ready translation in the request locale. Removed query params: `importance`,
 }
 ```
 
-`gallery`, `media`, `metadata`, `sources`, `content`, `dispute_note` appear on
-`show` only; list endpoints never load them (no N+1, no unbounded payload).
+`gallery`, `media`, `metadata`, `sources`, `content`, `dispute_note`, `seo`
+(`{title, description}` for the request locale), `external_links` (`[{title, url}]`)
+and `links` (`{verse|hadith|muslim|article|episode|tag|category: [{id, title, subtitle, url}]}`,
+public items only) appear on `show` only; list endpoints never load them (no N+1, no unbounded payload).
 
 **Removed fields**: `hijri_date`, `gregorian_year`, `event_type_label`,
 `event_type_icon`, `event_type_color`, `event_type_gradient` (now nested),

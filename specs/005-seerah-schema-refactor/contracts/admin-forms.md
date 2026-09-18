@@ -32,9 +32,19 @@ form-encoded `_method`, never `_method` inside JSON.
 | `gallery` | nullable array max 24 of `media.id` (ordered) |
 | `gallery_captions.{media_id}.{locale}` | nullable string max 255 |
 | `media_items` | nullable array of distinct `media.id` |
+| `seo.{locale}.title` / `.description` | nullable string max 70 / 160 |
+| `external_links.{locale}` | nullable array max 20; `.*.title` string max 255, `.*.url` `url:http,https` max 2048 (rows without url dropped) |
+| `links` | nullable array, keys limited to `verse, hadith, muslim, article, episode, tag, category` |
+| `links.{type}` | nullable array max 50 of distinct integer ids, in display order |
 
-Absent `metadata` / `sources` / `gallery` / `media_items` = leave stored value
-untouched. Present-but-empty = clear.
+Absent `metadata` / `sources` / `gallery` / `media_items` / `seo` / `external_links`
+= leave stored value untouched; present-but-empty = clear. For `links` this applies
+per type: a type key not posted is untouched, a type posted empty is cleared.
+
+The form is laid out like the article wizard: settings sidebar + tabs Main info /
+Content / SEO / Gallery / Media (media items + episode queue) / Links (related
+verses, hadiths, companions, articles; tags; categories; external links) /
+Statistics & Sources.
 
 Responses: HTML form → 302 to index with flash; `expectsJson()` → JSON envelope.
 422 on validation, 403 without permission, 404 on unknown id.

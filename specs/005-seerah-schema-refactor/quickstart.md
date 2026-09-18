@@ -52,7 +52,7 @@ mysqldump -h 127.0.0.1 -P 3308 -u root -p the_last_messenger \
 mysql -h 127.0.0.1 -P 3308 -u root -p the_last_messenger <<'SQL'
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS
-  seerah_events_media, seerah_events_gallery,
+  seerah_event_links, seerah_events_media, seerah_events_gallery,
   seerah_event_timeline_item_translations, seerah_event_timeline_items,
   seerah_participant_translations, seerah_participants,
   seerah_event_translations, seerah_events,
@@ -75,7 +75,11 @@ DELETE FROM migrations WHERE migration IN (
   '2026_06_19_100000_create_seerah_milestones_table',
   '2026_06_19_100001_add_milestone_id_to_seerah_events_table',
   '2026_08_13_100000_add_lessons_and_sources_to_seerah_event_translations',
-  '2026_08_15_120000_add_dispute_note_to_seerah_event_translations'
+  '2026_08_15_120000_add_dispute_note_to_seerah_event_translations',
+  -- new-shape names, in case an earlier 005 build already ran on this database
+  '2025_10_27_130000_create_seerah_tables',
+  '2026_03_09_200000_create_seerah_events_gallery_and_media_tables',
+  '2026_08_18_000004_create_seerah_event_relation_tables'
 );
 
 -- Polymorphic rows that pointed at the dropped events. SeerahEvent is not in the
@@ -85,7 +89,7 @@ DELETE FROM user_interactions WHERE interactable_type = 'App\\Domain\\Seerah\\Mo
 DELETE FROM content_schedules WHERE schedulable_type  = 'App\\Domain\\Seerah\\Models\\SeerahEvent';
 SQL
 
-# 4. Rebuild: only the two rewritten Seerah migrations should be pending
+# 4. Rebuild: only the two Seerah migrations (create_seerah_tables, create_seerah_event_relation_tables) should be pending
 php artisan migrate --pretend | grep -i seerah
 php artisan migrate
 

@@ -14,6 +14,8 @@
 --}}
 @once
 {{-- ═══════════ MODULE SELECTOR MODAL ═══════════ --}}
+{{-- Teleported: the first include usually sits inside an editor in a hidden tab/language panel. --}}
+<div x-data class="contents"><template x-teleport="body">
 <div x-data="moduleSelector()" x-show="show" x-cloak
      @open-module-selector.window="openModal($event.detail)"
      class="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -242,6 +244,7 @@
         </div>
     </div>
 </div>
+</template></div>
 
 @push('scripts')
 <script>
@@ -472,7 +475,7 @@ function moduleSelector() {
                 const selectedVersesData = this.verses
                     .filter(v => this.selectedVerses.includes(v.id))
                     .sort((a, b) => a.verse_number - b.verse_number)
-                    .map(v => ({ number: v.verse_number, key: v.verse_key, text: v.text }));
+                    .map(v => ({ id: v.id, number: v.verse_number, key: v.verse_key, text: v.text }));
                 block = {
                     type: 'verse',
                     surah_id: this.selectedSurah.id,

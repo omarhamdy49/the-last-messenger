@@ -14,10 +14,16 @@ use Illuminate\Validation\Rule;
  */
 class UpdateSeerahEventRequest extends StoreSeerahEventRequest
 {
-    public function rules(): array
+    protected function ownerId(): ?int
     {
         $routeParameter = $this->route('seerah_event') ?? $this->route('id');
-        $eventId = is_object($routeParameter) ? $routeParameter->id : $routeParameter;
+
+        return is_object($routeParameter) ? $routeParameter->id : ($routeParameter === null ? null : (int) $routeParameter);
+    }
+
+    public function rules(): array
+    {
+        $eventId = $this->ownerId();
 
         $rules = parent::rules();
 

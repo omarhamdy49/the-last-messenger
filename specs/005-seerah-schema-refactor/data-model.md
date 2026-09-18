@@ -94,6 +94,9 @@ Unique `(event_id, locale)`; FULLTEXT `(title, description)` (MySQL guard).
 
 - `metadata`: ordered list of `{key, value}`, max 20, both strings ≤ 255 / ≤ 1000.
 - `sources`: ordered list of `{title, author, reference}`, max 20 (unchanged shape).
+- `seo_metadata`: `{title ≤70, description ≤160}` for that locale — same shape as `article_locale`.
+  Public `<title>`/meta description fall back to the event title/description.
+- `external_links`: ordered list of `{title, url}` (http/https only), max 20.
 - Removed: `lessons`.
 - **Save rule**: a repeatable section that was not submitted (`null`) leaves the
   stored value alone; an explicitly submitted empty list clears it. Same rule the
@@ -111,6 +114,19 @@ Model: `SeerahEventGalleryItem`.
 `id`, `event_id` FK → events (cascade), `media_id` FK → media (cascade),
 timestamps. Unique `(event_id, media_id)`.
 Model: `SeerahEventMedia` (ids only — see Shared contract below).
+
+## seerah_event_links *(added 2026-09-17)*
+
+`id`, `event_id` FK → events (cascade), `type` string(20) (`LinkedContentType`:
+verse | hadith | muslim | article | episode | tag | category), `target_id`,
+`order` smallint, timestamps. Unique `(event_id, type, target_id)`.
+Model: `SeerahEventLink`. One table for every cross-module link: the event holds ids
+only and resolves them through the Shared `ContentReferenceLookup` (no FK to the
+target — a deleted target is skipped at render). Episodes are the video queue in
+`order`; tags/categories are unordered.
+
+Migration: `2026_08_18_000004_create_seerah_event_relation_tables` (gallery, media,
+links) — renamed from `2026_03_09_200000_create_seerah_events_gallery_and_media_tables`.
 
 ## Shared contract (new)
 

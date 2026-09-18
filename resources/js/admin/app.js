@@ -15,6 +15,9 @@ import './store.js';
 // Import language tabs helper
 import './language-tabs.js';
 
+// Clickable-step wizard + quick save shared by long admin forms (window.adminWizard).
+import './wizard.js';
+
 // Make Alpine and Chart available globally
 window.Alpine = Alpine;
 Alpine.plugin(collapse);

@@ -6,8 +6,11 @@ namespace App\Http\Requests\Admin;
 
 use App\Domain\Seerah\Enums\EventEra;
 use App\Domain\Seerah\Enums\SeerahEventStatus;
+use App\Domain\Shared\Enums\LinkedContentType;
+use App\Domain\Shared\Services\SlugGenerator;
 use App\Http\Requests\Admin\Content\Concerns\SanitizesRichText;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /**
@@ -46,6 +49,23 @@ class StoreSeerahEventRequest extends FormRequest
     {
         $this->sanitizeRichTextField('content');
         $this->sanitizeRichTextField('description');
+
+        // Slug is optional on the form: blank → generated from the English title,
+        // else the Arabic one. A partial update that omits the key keeps its slug.
+        if (! $this->filled('slug') && ($this->isMethod('post') || $this->has('slug'))) {
+            $title = app(SlugGenerator::class)->preferredText((array) $this->input('title', []), '');
+            $this->merge(['slug' => app(SlugGenerator::class)->unique(
+                trim($title) === '' ? 'event' : $title,
+                fn (string $slug): bool => DB::table('seerah_events')->where('slug', $slug)
+                    ->when($this->ownerId(), fn ($q, $id) => $q->where('id', '!=', $id))->exists(),
+            ) ?: 'event']);
+        }
+    }
+
+    /** Id of the event being updated; null on create. */
+    protected function ownerId(): ?int
+    {
+        return null;
     }
 
     public function rules(): array
@@ -112,6 +132,24 @@ class StoreSeerahEventRequest extends FormRequest
             'media_items' => ['nullable', 'array', 'max:24'],
             'media_items.*' => ['integer', 'distinct', 'exists:media,id'],
 
+            // SEO per locale — same limits the article SEO tab enforces.
+            'seo' => ['nullable', 'array'],
+            'seo.*' => ['nullable', 'array'],
+            'seo.*.title' => ['nullable', 'string', 'max:70'],
+            'seo.*.description' => ['nullable', 'string', 'max:160'],
+
+            'external_links' => ['nullable', 'array'],
+            'external_links.*' => ['nullable', 'array', 'max:20'],
+            'external_links.*.*.title' => ['nullable', 'string', 'max:255'],
+            'external_links.*.*.url' => ['nullable', 'url:http,https', 'max:2048'],
+
+            // Cross-module links: type => ordered target ids. Existence is checked
+            // by the lookup at render time (targets live in other modules).
+            'links' => ['nullable', 'array:'.implode(',', LinkedContentType::values())],
+            'links.*' => ['nullable', 'array', 'max:50'],
+            // No 'distinct': on a nested wildcard it compares ids ACROSS types. The DTO de-duplicates per type.
+            'links.*.*' => ['integer', 'min:1'],
+
             ...array_fill_keys(self::REMOVED_FIELDS, ['prohibited']),
         ];
     }
@@ -120,8 +158,31 @@ class StoreSeerahEventRequest extends FormRequest
     {
         return [
             'title.ar.required' => __('admin.field_required'),
+            'title.ar.required_with' => __('admin.field_required'),
             'slug.unique' => __('admin.slug_taken'),
             'slug.regex' => __('admin.slug_format'),
         ];
+    }
+
+    /**
+     * Readable names for messages shown next to fields (quick save shows them inline).
+     */
+    public function attributes(): array
+    {
+        $attributes = [
+            'event_type' => __('wizard.seerah.checks.type'),
+            'hijri_year' => __('wizard.seerah.checks.date'),
+            'location_id' => __('wizard.seerah.checks.place'),
+        ];
+
+        foreach (enabled_content_languages() as $locale => $language) {
+            $attributes["title.{$locale}"] = "العنوان ({$language})";
+            $attributes["description.{$locale}"] = "الوصف ({$language})";
+            $attributes["content.{$locale}"] = "المحتوى ({$language})";
+            $attributes["seo.{$locale}.title"] = __('articles.seo.title')." ({$language})";
+            $attributes["seo.{$locale}.description"] = __('articles.seo.description')." ({$language})";
+        }
+
+        return $attributes;
     }
 }

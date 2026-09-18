@@ -23,6 +23,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $dispute_note
  * @property array<int, array{key: string, value: string}>|null $metadata
  * @property array<int, array{title?: string, author?: string, reference?: string}>|null $sources
+ * @property array{title?: string, description?: string}|null $seo_metadata
+ * @property array<int, array{title: string, url: string}>|null $external_links
  * @property bool $is_ready
  * @property Carbon $created_at
  * @property Carbon $updated_at
@@ -51,6 +53,8 @@ class SeerahEventTranslation extends Model
         'dispute_note',
         'metadata',
         'sources',
+        'seo_metadata',
+        'external_links',
         'is_ready',
     ];
 
@@ -64,6 +68,8 @@ class SeerahEventTranslation extends Model
         'is_ready' => 'boolean',
         'metadata' => 'array',
         'sources' => 'array',
+        'seo_metadata' => 'array',
+        'external_links' => 'array',
     ];
 
     /**

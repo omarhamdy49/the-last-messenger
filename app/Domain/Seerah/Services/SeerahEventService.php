@@ -7,8 +7,11 @@ namespace App\Domain\Seerah\Services;
 use App\Domain\Seerah\DTOs\SeerahEventData;
 use App\Domain\Seerah\Models\SeerahEvent;
 use App\Domain\Seerah\Repositories\SeerahEventRepositoryInterface;
+use App\Domain\Shared\Contracts\ContentReference;
+use App\Domain\Shared\Contracts\ContentReferenceLookup;
 use App\Domain\Shared\Contracts\MediaLibraryLookup;
 use App\Domain\Shared\Contracts\MediaReference;
+use App\Domain\Shared\Enums\LinkedContentType;
 use App\Domain\Shared\Services\BaseService;
 use App\Domain\Shared\Services\PublicImageService;
 use App\Exceptions\Domain\ResourceNotFoundException;
@@ -40,6 +43,7 @@ class SeerahEventService extends BaseService
         SeerahEventRepositoryInterface $repository,
         private readonly PublicImageService $images,
         private readonly MediaLibraryLookup $mediaLibrary,
+        private readonly ContentReferenceLookup $contentLookup,
     ) {
         $this->repository = $repository;
     }
@@ -67,12 +71,13 @@ class SeerahEventService extends BaseService
         }
 
         $event->setRelation('resolvedMedia', collect($this->resolveMedia($event)));
+        $event->setRelation('resolvedLinks', collect($this->contentLookup->resolve($event->linkIdsByType(), app()->getLocale(), publicOnly: true)));
 
         return $event;
     }
 
     /**
-     * @return array{event: SeerahEvent, prev: ?SeerahEvent, next: ?SeerahEvent, related: Collection<int, SeerahEvent>, media: array<int, MediaReference>}
+     * @return array{event: SeerahEvent, prev: ?SeerahEvent, next: ?SeerahEvent, related: Collection<int, SeerahEvent>, media: array<int, MediaReference>, links: array<string, array<int, ContentReference>>}
      *
      * @throws ResourceNotFoundException
      */
@@ -85,23 +90,44 @@ class SeerahEventService extends BaseService
         }
 
         $page['media'] = $this->resolveMedia($page['event']);
+        $page['links'] = $this->contentLookup->resolve($page['event']->linkIdsByType(), $locale, publicOnly: true);
 
         return $page;
     }
 
     /**
      * Edit-form state: the event with everything the form round-trips, plus the
-     * attached media resolved for the picker.
+     * attached media and cross-module links resolved for the pickers (drafts
+     * included — the editor must see what is linked even if it is not public).
      *
-     * @return array{event: SeerahEvent, media: array<int, MediaReference>}
+     * @return array{event: SeerahEvent, media: array<int, MediaReference>, links: array<string, array<int, ContentReference>>}
      */
     public function getEditPayload(int $id): array
     {
         /** @var SeerahEvent $event */
         $event = $this->repository->findOrFail($id);
-        $event->loadMissing(['translations', 'gallery', 'mediaLinks', 'place']);
+        $event->loadMissing(['translations', 'gallery', 'mediaLinks', 'links', 'place']);
 
-        return ['event' => $event, 'media' => $this->resolveMedia($event)];
+        return [
+            'event' => $event,
+            'media' => $this->resolveMedia($event),
+            'links' => $this->contentLookup->resolve($event->linkIdsByType(), app()->getLocale()),
+        ];
+    }
+
+    /**
+     * Tag and category choices for the event form.
+     *
+     * @return array{tags: array<int, string>, categories: array<int, string>}
+     */
+    public function linkOptions(): array
+    {
+        $locale = app()->getLocale();
+
+        return [
+            'tags' => $this->contentLookup->options(LinkedContentType::TAG, $locale),
+            'categories' => $this->contentLookup->options(LinkedContentType::CATEGORY, $locale),
+        ];
     }
 
     /**
@@ -368,6 +394,52 @@ class SeerahEventService extends BaseService
 
         if ($data->hasInput('media_items')) {
             $this->syncMedia($event, $data->mediaItems);
+        }
+
+        if ($data->hasInput('seo')) {
+            $this->syncSeo($event, $data->seo);
+        }
+
+        if ($data->hasInput('external_links')) {
+            $this->syncLocaleArray($event, 'external_links', $data->externalLinks);
+        }
+
+        if ($data->hasInput('links')) {
+            $this->syncLinks($event, $data->links);
+        }
+    }
+
+    /**
+     * @param  array<string, array{title: ?string, description: ?string}>  $byLocale
+     */
+    private function syncSeo(SeerahEvent $event, array $byLocale): void
+    {
+        foreach ($byLocale as $locale => $seo) {
+            $translation = $event->translations()->firstOrNew(['locale' => $locale]);
+            $value = array_filter($seo, fn ($v): bool => $v !== null);
+
+            if (! $translation->exists && $value === []) {
+                continue;
+            }
+
+            $translation->forceFill(['seo_metadata' => $value !== [] ? $value : null])->save();
+        }
+    }
+
+    /**
+     * Replace each submitted type's links with the submitted ids, in order.
+     * Types not submitted are left untouched.
+     *
+     * @param  array<string, array<int, int>>  $byType
+     */
+    private function syncLinks(SeerahEvent $event, array $byType): void
+    {
+        foreach ($byType as $type => $ids) {
+            $event->links()->where('type', $type)->delete();
+
+            foreach ($ids as $order => $targetId) {
+                $event->links()->create(['type' => $type, 'target_id' => $targetId, 'order' => $order]);
+            }
         }
     }
 
