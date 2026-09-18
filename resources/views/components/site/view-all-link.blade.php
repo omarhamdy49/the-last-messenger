@@ -12,8 +12,7 @@
         $label    — link text
         $count    — optional total, rendered as a chip (locale-formatted)
         $variant  — 'pill' (primary, centred under a section) | 'inline' (header link)
-        $gradient — literal Tailwind gradient pair, pill variant only; null (the
-                    default) paints the brand signature gradient from the tokens
+        $gradient — literal Tailwind gradient pair, pill variant only
         $tone     — literal Tailwind text-* class, inline variant only
 --}}
 @props([
@@ -21,8 +20,8 @@
     'label' => null,
     'count' => null,
     'variant' => 'pill',
-    'gradient' => null,
-    'tone' => 'text-[color:var(--sx-accent)]',
+    'gradient' => 'from-[#6f42c1] to-[#8b5cf6]',
+    'tone' => 'text-[#0056b3] dark:text-[#4a9eff]',
 ])
 
 @php
@@ -79,17 +78,16 @@
        ]) }}>
         <span>{{ $label }}</span>
         @if($countLabel)
-            <span class="rounded-full bg-[color:var(--sx-surface-2)] px-2 py-0.5 text-xs font-bold tabular-nums">{{ $countLabel }}</span>
+            <span class="rounded-full bg-black/5 px-2 py-0.5 text-xs font-bold tabular-nums dark:bg-white/10">{{ $countLabel }}</span>
         @endif
         <i class="view-all-arrow h-4 w-4" data-lucide="{{ $arrow }}" aria-hidden="true"></i>
     </a>
 @else
     <a href="{{ $href }}"
-       @if (! $gradient) style="background: var(--sx-grad)" @endif
        {{ $attributes->class([
            'view-all-pill group relative isolate inline-flex h-12 items-center gap-3 overflow-hidden',
            'rounded-full px-7 text-base font-bold text-white',
-           'bg-gradient-to-r '.$gradient => (bool) $gradient,
+           'bg-gradient-to-r '.$gradient,
            'ring-1 ring-inset ring-white/25',
            'shadow-[0_12px_30px_-10px_rgba(0,0,0,.5)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,.6)]',
            'focus:outline-none focus-visible:ring-2 focus-visible:ring-white',

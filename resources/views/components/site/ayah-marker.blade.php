@@ -4,11 +4,11 @@
 
     Props:
         $number — verse number
-        $tone   — text-* classes for the mark (token-based, never a literal hue)
+        $tone   — literal Tailwind text-* classes for the mark
 --}}
 @props([
     'number',
-    'tone' => 'text-[color:var(--sx-accent)]',
+    'tone' => 'text-[#0f7c8c] dark:text-[#64CCC5]',
 ])
 
 <span class="relative mx-1 inline-flex h-8 w-8 shrink-0 items-center justify-center align-middle">
@@ -17,5 +17,5 @@
         <rect x="7" y="7" width="18" height="18" rx="2" stroke="currentColor" stroke-width="1" opacity=".7"
               transform="rotate(45 16 16)"/>
     </svg>
-    <span class="relative text-[11px] font-bold {{ $tone }}">{{ $number }}</span>
+    <span class="relative font-sans text-[11px] font-bold {{ $tone }}">{{ $number }}</span>
 </span>

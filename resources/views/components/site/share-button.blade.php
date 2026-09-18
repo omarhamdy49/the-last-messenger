@@ -21,9 +21,6 @@
     'variant' => 'glass',
 ])
 
-{{-- ponytail: kept as a bespoke round icon button rather than `.sx-btn` — the
-     glass variant sits on imagery, where the button must stay translucent. --}}
-
 <div x-data="{
         copied: false,
         async share() {
@@ -50,16 +47,15 @@
     <button type="button"
             @click="share()"
             aria-label="{{ __('site.share') }}"
-            title="{{ __('site.share') }}"
             {{ $attributes->class([
                 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full',
                 'ring-1 ring-inset transition focus:outline-none focus-visible:ring-2',
                 'bg-white/15 text-white ring-white/25 backdrop-blur-sm hover:bg-white/25
                  focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-transparent'
                     => $variant === 'glass',
-                'bg-[color:var(--sx-surface-2)] text-[color:var(--sx-ink-2)] ring-[color:var(--sx-line)]
-                 hover:text-[color:var(--sx-accent)] hover:ring-[color:var(--sx-line-strong)]
-                 focus-visible:ring-[color:var(--sx-teal)]'
+                'bg-gray-100 text-gray-600 ring-gray-200 hover:bg-gray-200
+                 dark:bg-[#0f3460] dark:text-gray-200 dark:ring-gray-700 dark:hover:bg-[#0f3460]/70
+                 focus-visible:ring-[#218838]'
                     => $variant === 'surface',
             ]) }}>
         <i class="h-5 w-5" data-lucide="share-2" x-show="!copied"></i>
