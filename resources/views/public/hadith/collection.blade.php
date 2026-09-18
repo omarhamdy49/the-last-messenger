@@ -60,7 +60,10 @@
                             :url="route('public.hadith.book', [$collection->slug, $book->book_number])"
                             :title="$book->title_ar ?: $book->title_en"
                             icon="book"
-                            :big="$isRtl ? arabic_digits($book->book_number) : $book->book_number"
+                            {{-- Only a real figure goes in the figure slot. Muslim's
+                                 "introduction" is a book_number too, and rendering it
+                                 here painted the word across the book icon. --}}
+                            :big="$book->hasFigureNumber() ? ($isRtl ? arabic_digits($book->book_number) : $book->book_number) : null"
                             :meta="[
                                 ['icon' => 'scroll-text', 'text' => __('hadith.hadiths_count', ['count' => number_format((int) $book->hadiths_count)])],
                             ]" />

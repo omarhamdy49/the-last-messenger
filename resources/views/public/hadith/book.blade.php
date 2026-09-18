@@ -34,10 +34,15 @@
         <x-public.editorial.page-hero
             :eyebrow-url="route('public.hadith.collection', $collection->slug)" :eyebrow-label="$collectionTitle" eyebrow-icon="library-big"
             :title="$bookTitle" :stats="$stats">
-            <span class="sx-chip justify-self-start">
-                <i data-lucide="book" aria-hidden="true"></i>{{ __('hadith.book') }}
-                <span class="tabular-nums">{{ $isRtl ? arabic_digits($book->book_number) : $book->book_number }}</span>
-            </span>
+            {{-- "كتاب introduction" is not a citation. When the book is not
+                 numbered, the hero title already names it, so the chip is
+                 dropped rather than printed wrong. --}}
+            @if ($book->hasFigureNumber())
+                <span class="sx-chip justify-self-start">
+                    <i data-lucide="book" aria-hidden="true"></i>{{ __('hadith.book') }}
+                    <span class="tabular-nums">{{ $isRtl ? arabic_digits($book->book_number) : $book->book_number }}</span>
+                </span>
+            @endif
         </x-public.editorial.page-hero>
 
         {{-- Without a chapter index there is no aside, so the reading grid

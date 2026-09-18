@@ -70,6 +70,19 @@ class HadithBook extends Model
             : ($this->title_en ?? $this->title_ar);
     }
 
+    /**
+     * Whether `book_number` reads as a figure.
+     *
+     * The column is a string because the sources do not only number their
+     * books: across the corpus it also holds "introduction", "35b" and "8b".
+     * The short ones sit fine in a figure-sized slot; "introduction" overflows
+     * the card's number badge and hides the icon drawn underneath it.
+     */
+    public function hasFigureNumber(): bool
+    {
+        return mb_strlen((string) $this->book_number) <= 4;
+    }
+
     protected static function newFactory(): HadithBookFactory
     {
         return HadithBookFactory::new();
