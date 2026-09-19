@@ -14,6 +14,7 @@
 
 @section('page-header')
     <x-admin.quran.page-header :title="$resource->displayName()" icon="library" :subtitle="$resource->author_name"
+        :image="\App\Domain\Quran\Services\PlaylistCard::imageUrl($resource->image)"
         :crumbs="[$kind->label() => route('admin.quran.resources.index', $kind->routeSegment())]">
         @if ($rowsRoute)
             <x-admin.quran.button variant="secondary" icon="list" :href="route($rowsRoute, $resource->id)">{{ __('quran.manage.manage_content') }}</x-admin.quran.button>
@@ -27,10 +28,21 @@
         @endcan
         @can('edit quran')
             <x-admin.quran.button icon="edit-2" :href="route('admin.quran.resources.edit', $resource->id)">{{ __('quran.manage.edit') }}</x-admin.quran.button>
+            @if (($resource->metadata['hidden_by_admin'] ?? false) === true)
+                <form method="POST" action="{{ route('admin.quran.resources.toggle', [$resource->id, 'is_active']) }}">@csrf
+                    <x-admin.quran.button variant="secondary" icon="eye">{{ __('quran.manage.unhide') }}</x-admin.quran.button>
+                </form>
+            @else
+                <form method="POST" action="{{ route('admin.quran.resources.hide', $resource->id) }}"
+                      onsubmit="return window.confirmSubmit(this, @js(['title' => __('quran.manage.hide'), 'message' => __('quran.manage.confirm_hide'), 'confirmText' => __('quran.manage.hide'), 'type' => 'warning']))">
+                    @csrf
+                    <x-admin.quran.button variant="secondary" icon="eye-off">{{ __('quran.manage.hide') }}</x-admin.quran.button>
+                </form>
+            @endif
             <form method="POST" action="{{ route('admin.quran.resources.destroy', $resource->id) }}"
-                  x-data @submit="if (!window.confirm(@js($resource->isFromQf() ? __('quran.manage.confirm_hide') : __('quran.manage.confirm_delete_resource')))) $event.preventDefault()">
+                  onsubmit="return window.confirmSubmit(this, @js(['title' => __('quran.manage.delete'), 'message' => __('quran.manage.confirm_delete_resource'), 'confirmText' => __('quran.manage.delete'), 'type' => 'danger']))">
                 @csrf @method('DELETE')
-                <x-admin.quran.button variant="danger" icon="trash-2">{{ $resource->isFromQf() ? __('quran.manage.hide') : __('quran.manage.delete') }}</x-admin.quran.button>
+                <x-admin.quran.button variant="danger" icon="trash-2">{{ __('quran.manage.delete') }}</x-admin.quran.button>
             </form>
         @endcan
     </x-admin.quran.page-header>

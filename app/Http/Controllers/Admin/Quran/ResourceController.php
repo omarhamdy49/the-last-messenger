@@ -46,6 +46,8 @@ final class ResourceController extends Controller
             'language' => $request->string('language')->toString() ?: null,
             'status' => $request->string('status')->toString() ?: null,
             'source' => $request->string('source')->toString() ?: null,
+            'style' => $request->string('style')->toString() ?: null,
+            'sort' => $request->string('sort')->toString() ?: null,
         ];
 
         return view('admin.quran.resources.index', [
@@ -119,12 +121,21 @@ final class ResourceController extends Controller
     public function destroy(Request $request, int $resource): RedirectResponse|JsonResponse
     {
         $model = $this->resources->find($resource) ?? abort(404);
-        $deleted = $this->resources->delete($resource);
-        $message = $deleted ? __('quran.manage.deleted') : __('quran.manage.qf_resource_hidden');
+        $this->resources->delete($resource);
 
         return $request->expectsJson()
-            ? response()->json(['success' => true, 'data' => ['deleted' => $deleted]])
-            : redirect()->route('admin.quran.resources.index', $model->kind->routeSegment())->with('success', $message);
+            ? response()->json(['success' => true])
+            : redirect()->route('admin.quran.resources.index', $model->kind->routeSegment())->with('success', __('quran.manage.deleted'));
+    }
+
+    public function hide(Request $request, int $resource): RedirectResponse|JsonResponse
+    {
+        $this->resources->find($resource) ?? abort(404);
+        $this->resources->hide($resource);
+
+        return $request->expectsJson()
+            ? response()->json(['success' => true])
+            : back()->with('success', __('quran.manage.qf_resource_hidden'));
     }
 
     public function toggle(Request $request, int $resource, string $field): RedirectResponse|JsonResponse

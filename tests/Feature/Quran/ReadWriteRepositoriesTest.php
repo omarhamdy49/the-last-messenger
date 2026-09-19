@@ -31,7 +31,7 @@ use Tests\TestCase;
 
 /**
  * The US3 admin/read repositories against the real schema: default exclusivity,
- * QF rows are hidden not deleted, locked content rows, audio templates and
+ * hide keeps the row while delete removes it, locked content rows, audio templates and
  * timings, and a fixed query count for the verse payload.
  */
 final class ReadWriteRepositoriesTest extends TestCase
@@ -53,19 +53,21 @@ final class ReadWriteRepositoriesTest extends TestCase
         $this->assertTrue($fr->fresh()->is_default, 'another language keeps its default');
     }
 
-    public function test_deleting_a_qf_resource_hides_it_and_a_manual_one_is_removed(): void
+    public function test_hiding_keeps_the_row_and_deleting_removes_qf_and_manual_alike(): void
     {
         $repo = app(ResourceRepositoryInterface::class);
         $qf = QuranResource::factory()->translation()->qf(20)->asDefault()->create();
         $manual = QuranResource::factory()->translation()->manual()->create();
 
-        $this->assertFalse($repo->delete($qf->id));
-        $this->assertTrue($repo->delete($manual->id));
-
+        $repo->hide($qf->id);
         $qf->refresh();
         $this->assertFalse($qf->is_active);
         $this->assertFalse($qf->is_default);
         $this->assertTrue($qf->metadata['hidden_by_admin']);
+
+        $repo->delete($qf->id);
+        $repo->delete($manual->id);
+        $this->assertNull(QuranResource::query()->find($qf->id));
         $this->assertNull(QuranResource::query()->find($manual->id));
     }
 

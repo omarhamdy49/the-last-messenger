@@ -174,6 +174,14 @@ final class QuranAdminTest extends TestCase
         $this->post(route('admin.quran.resources.store', 'tafsirs'), $payload)->assertRedirect();
 
         $this->get(route('admin.quran.resources.index', 'translations'))->assertOk()->assertSee('My translation');
+
+        // Alphabetical by default, hidden rows filterable, other sorts accepted.
+        $zed = QuranResource::factory()->translation()->manual()->create(['name' => 'Zed', 'display_order' => 0]);
+        $abe = QuranResource::factory()->translation()->manual()->create(['name' => 'Abe', 'display_order' => 9]);
+        $this->get(route('admin.quran.resources.index', 'translations'))->assertSeeInOrder(['Abe', 'Zed']);
+        $this->get(route('admin.quran.resources.index', ['translations', 'sort' => 'name_desc']))->assertSeeInOrder(['Zed', 'Abe']);
+        $this->post(route('admin.quran.resources.hide', $zed->id));
+        $this->get(route('admin.quran.resources.index', ['translations', 'status' => 'hidden']))->assertSee('Zed')->assertDontSee('Abe');
         $this->get(route('admin.quran.resources.show', $resource->id))->assertOk();
         $this->get(route('admin.quran.resources.edit', $resource->id))->assertOk();
     }
@@ -192,6 +200,17 @@ final class QuranAdminTest extends TestCase
         $this->assertNull($resource->refresh()->image);
 
         $this->get(route('admin.quran.resources.edit', $resource->id))->assertOk()->assertSee('name="image_url"', false)->assertSee('data-wysiwyg', false);
+
+        // A replaced or removed local portrait leaves no file; prune sweeps what nothing references.
+        Storage::fake('public');
+        Storage::disk('public')->put('quran/reciters/old.jpeg', 'x');
+        Storage::disk('public')->put('quran/reciters/orphan.jpeg', 'x');
+        $resource->forceFill(['image' => 'quran/reciters/old.jpeg'])->save();
+        $this->put(route('admin.quran.resources.update', $resource->id), $payload + ['image_url' => 'https://cdn.example.com/new.webp'])->assertRedirect();
+        Storage::disk('public')->assertMissing('quran/reciters/old.jpeg');
+        Storage::disk('public')->assertExists('quran/reciters/orphan.jpeg');
+        $this->artisan('quran:reciter:images', ['--prune' => true])->assertSuccessful();
+        Storage::disk('public')->assertMissing('quran/reciters/orphan.jpeg');
         $this->get(route('admin.quran.resources.create', 'chapter_reciters'))->assertOk()->assertSee('data-wizard-step="source"', false);
     }
 
@@ -239,9 +258,26 @@ final class QuranAdminTest extends TestCase
         $this->postJson(route('admin.quran.resources.reorder', 'translations'), ['ids' => [$manual->id, $qf->id]])->assertOk();
         $this->assertSame(1, $qf->fresh()->display_order);
 
-        $this->delete(route('admin.quran.resources.destroy', $qf->id))->assertRedirect();
-        $this->assertNotNull(QuranResource::query()->find($qf->id));
+        // Hide keeps the row; activating again unhides it.
+        $this->post(route('admin.quran.resources.hide', $qf->id))->assertRedirect();
         $this->assertFalse($qf->fresh()->is_active);
+        $this->assertTrue($qf->fresh()->metadata['hidden_by_admin']);
+        $this->post(route('admin.quran.resources.toggle', [$qf->id, 'is_active']))->assertRedirect();
+        $this->assertTrue($qf->fresh()->is_active);
+        $this->assertArrayNotHasKey('hidden_by_admin', $qf->fresh()->metadata ?? []);
+
+        // Delete is permanent for QF and manual rows alike, and takes a reciter's recordings and files.
+        Storage::fake('public');
+        $reciter = QuranResource::factory()->chapterReciter()->qf(12)->create();
+        $recording = QuranResource::factory()->chapterReciter()->manual()->create(['parent_id' => $reciter->id]);
+        Storage::disk('public')->put("quran/audio/{$reciter->id}/001.mp3", 'x');
+        Storage::disk('public')->put("quran/audio/{$recording->id}/001.mp3", 'x');
+
+        $this->delete(route('admin.quran.resources.destroy', $reciter->id))->assertRedirect();
+        $this->assertNull(QuranResource::query()->find($reciter->id));
+        $this->assertNull(QuranResource::query()->find($recording->id));
+        Storage::disk('public')->assertMissing("quran/audio/{$reciter->id}/001.mp3");
+        Storage::disk('public')->assertMissing("quran/audio/{$recording->id}/001.mp3");
         $this->delete(route('admin.quran.resources.destroy', $manual->id))->assertRedirect();
         $this->assertNull(QuranResource::query()->find($manual->id));
     }

@@ -20,20 +20,26 @@
     <x-admin.quran.flash />
 
     @php
-        $hasFilters = collect(request()->only(['search', 'language', 'status', 'source']))->filter(fn ($v) => filled($v))->isNotEmpty();
+        $hasFilters = collect(request()->only(['search', 'language', 'status', 'source', 'style', 'sort']))->filter(fn ($v) => filled($v))->isNotEmpty();
+        $sortOptions = collect(\App\Domain\Quran\Repositories\EloquentResourceRepository::ADMIN_SORTS)->mapWithKeys(fn ($s) => [$s => __('quran.manage.sort_'.$s)])->all();
         // Chapter reciters hold one file per surah, so their record count is a share of 114.
         $outOf = $kind === \App\Domain\Quran\Enums\ResourceKind::CHAPTER_RECITER ? 114 : null;
         $toggleLabels = ['is_active' => __('quran.manage.active'), 'sync_enabled' => __('quran.manage.sync_enabled')];
     @endphp
 
     <x-admin.quran.panel class="!p-4 sm:!p-5">
-        <form method="GET" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))_auto] lg:items-end">
+        <form method="GET" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[minmax(0,2fr)_repeat(5,minmax(0,1fr))_auto] xl:items-end">
             <x-admin.quran.field name="search" type="search" :label="__('quran.manage.search')" :value="request('search')" />
             <x-admin.quran.field name="language" type="select" :label="__('quran.manage.language')" :value="request('language')" :options="$languages" />
             <x-admin.quran.field name="status" type="select" :label="__('quran.manage.status')" :value="request('status')"
-                :options="['active' => __('quran.manage.active'), 'inactive' => __('quran.manage.inactive'), 'sync' => __('quran.manage.sync_enabled')]" />
+                :options="['active' => __('quran.manage.active'), 'inactive' => __('quran.manage.inactive'), 'hidden' => __('quran.manage.hidden'), 'sync' => __('quran.manage.sync_enabled')]" />
             <x-admin.quran.field name="source" type="select" :label="__('quran.manage.source')" :value="request('source')"
                 :options="['qf' => __('quran.manage.source_qf'), 'manual' => __('quran.manage.source_manual')]" />
+            @if ($kind->isReciter())
+                <x-admin.quran.field name="style" type="select" :label="__('quran.manage.style')" :value="request('style')"
+                    :options="collect(\App\Domain\Quran\Enums\RecitationStyle::cases())->mapWithKeys(fn ($s) => [$s->value => $s->label()])->all()" />
+            @endif
+            <x-admin.quran.field name="sort" type="select" :label="__('quran.manage.sort')" :value="request('sort', 'name')" :options="$sortOptions" :blank="false" />
             <x-admin.quran.button icon="filter" class="h-[42px] justify-center">{{ __('quran.manage.filter') }}</x-admin.quran.button>
         </form>
 

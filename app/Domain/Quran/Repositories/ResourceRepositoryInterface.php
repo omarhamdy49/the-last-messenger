@@ -15,7 +15,7 @@ use Illuminate\Support\Collection;
 interface ResourceRepositoryInterface
 {
     /**
-     * @param  array{search?: string|null, language?: string|null, status?: string|null, source?: string|null}  $filters
+     * @param  array{search?: string|null, language?: string|null, status?: string|null, source?: string|null, style?: string|null, sort?: string|null}  $filters
      */
     public function paginateAdmin(ResourceKind $kind, array $filters, int $perPage): LengthAwarePaginator;
 
@@ -77,12 +77,15 @@ interface ResourceRepositoryInterface
     public function update(int $id, ResourceData $data): QuranResource;
 
     /**
-     * Manual rows are deleted with their content; QF rows are hidden (a later
-     * catalogue import would otherwise bring them back).
-     *
-     * @return bool true when deleted, false when only hidden
+     * Deactivate and flag as hidden by an admin; toggling `is_active` back on unhides.
      */
-    public function delete(int $id): bool;
+    public function hide(int $id): QuranResource;
+
+    /**
+     * Delete the row, its recordings, its content and its locally stored files.
+     * A later catalogue import re-creates a QF row, inactive.
+     */
+    public function delete(int $id): void;
 
     /**
      * @param  'is_active'|'is_default'|'sync_enabled'  $field

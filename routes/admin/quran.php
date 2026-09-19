@@ -106,6 +106,7 @@ Route::prefix('quran')->name('admin.quran.')->group(function () use ($kinds, $ro
         Route::get('resources/{resource}/edit', [ResourceController::class, 'edit'])->whereNumber('resource')->name('resources.edit');
         Route::put('resources/{resource}', [ResourceController::class, 'update'])->whereNumber('resource')->name('resources.update');
         Route::delete('resources/{resource}', [ResourceController::class, 'destroy'])->whereNumber('resource')->name('resources.destroy');
+        Route::post('resources/{resource}/hide', [ResourceController::class, 'hide'])->whereNumber('resource')->name('resources.hide');
         Route::post('resources/{resource}/merge', [ResourceController::class, 'merge'])->whereNumber('resource')->name('resources.merge');
         Route::post('resources/{resource}/release', [ResourceController::class, 'release'])->whereNumber('resource')->name('resources.release');
         Route::post('resources/{resource}/toggle/{field}', [ResourceController::class, 'toggle'])->whereNumber('resource')

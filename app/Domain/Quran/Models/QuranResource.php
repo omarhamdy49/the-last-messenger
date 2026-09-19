@@ -8,6 +8,7 @@ use App\Domain\Quran\Enums\ExternalSource;
 use App\Domain\Quran\Enums\RecitationStyle;
 use App\Domain\Quran\Enums\ResourceKind;
 use App\Domain\Quran\Enums\ResourceSource;
+use App\Domain\Shared\Services\PublicImageService;
 use App\Domain\Shared\Traits\HasLocalizedContent;
 use Database\Factories\Quran\ResourceFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -82,6 +83,25 @@ class QuranResource extends Model
         'last_fetch_report' => 'array',
         'metadata' => 'array',
     ];
+
+    /**
+     * A replaced or removed portrait leaves no file behind. Remote URLs are not ours.
+     */
+    protected static function booted(): void
+    {
+        $forget = static function (?string $path): void {
+            if ($path !== null && $path !== '' && ! str_starts_with($path, 'http')) {
+                app(PublicImageService::class)->delete($path);
+            }
+        };
+
+        static::updated(static function (self $resource) use ($forget): void {
+            if ($resource->wasChanged('image') && $resource->getOriginal('image') !== $resource->image) {
+                $forget($resource->getOriginal('image'));
+            }
+        });
+        static::deleted(static fn (self $resource) => $forget($resource->image));
+    }
 
     protected static function newFactory(): ResourceFactory
     {

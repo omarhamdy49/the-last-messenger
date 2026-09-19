@@ -27,7 +27,7 @@ final class ResourceService
     ) {}
 
     /**
-     * @param  array{search?: string|null, language?: string|null, status?: string|null, source?: string|null}  $filters
+     * @param  array{search?: string|null, language?: string|null, status?: string|null, source?: string|null, style?: string|null, sort?: string|null}  $filters
      */
     public function adminIndex(ResourceKind $kind, array $filters, int $perPage): LengthAwarePaginator
     {
@@ -120,13 +120,16 @@ final class ResourceService
         return $this->afterWrite($this->resources->update($id, $data));
     }
 
-    public function delete(int $id): bool
+    public function hide(int $id): QuranResource
     {
-        $deleted = $this->resources->delete($id);
+        return $this->afterWrite($this->resources->hide($id));
+    }
+
+    public function delete(int $id): void
+    {
+        $this->resources->delete($id);
         QuranCacheKeys::flushResources();
         QuranCacheKeys::flushReciters();
-
-        return $deleted;
     }
 
     /**

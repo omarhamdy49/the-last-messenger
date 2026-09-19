@@ -10,6 +10,7 @@ use App\Domain\Quran\Enums\ResourceKind;
 use App\Domain\Quran\Models\QuranResource;
 use App\Domain\Quran\Repositories\ResourceRepositoryInterface;
 use App\Domain\Quran\Services\QuranCacheKeys;
+use App\Domain\Shared\Services\PublicImageService;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\File;
 use Illuminate\Support\Facades\Http;
@@ -196,6 +197,39 @@ final class ReciterProfileImporter
         }
 
         return $names;
+    }
+
+    /**
+     * Delete portrait files on the public disk that no resource references any more
+     * (rows deleted before the model forgot its file, or replaced by hand).
+     */
+    public function pruneImages(): ImportReport
+    {
+        $report = new ImportReport('reciter-images-prune');
+        $disk = Storage::disk('public');
+        $referenced = QuranResource::query()->whereNotNull('image')->where('image', 'not like', 'http%')->pluck('image')->all();
+        $keep = array_flip($referenced);
+        foreach ($referenced as $path) {
+            foreach (array_keys(PublicImageService::SIZES) as $size) {
+                $keep[PublicImageService::derivedPath($path, $size)] = true;
+            }
+        }
+
+        foreach ([config('quran.profiles.path'), 'quran/resources'] as $directory) {
+            foreach ($disk->files(trim((string) $directory, '/')) as $file) {
+                $report->expected++;
+                if (isset($keep[$file])) {
+                    $report->unchanged++;
+
+                    continue;
+                }
+                $disk->delete($file);
+                $report->deleted++;
+                $report->note("removed {$file}");
+            }
+        }
+
+        return $report;
     }
 
     /**

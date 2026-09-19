@@ -7,6 +7,7 @@ namespace App\Domain\Quran\Repositories;
 use App\Domain\Quran\DTOs\ReciterData;
 use App\Domain\Quran\DTOs\ResourceData;
 use App\Domain\Quran\Enums\ExternalSource;
+use App\Domain\Quran\Enums\RecitationStyle;
 use App\Domain\Quran\Enums\ResourceKind;
 use App\Domain\Quran\Enums\ResourceSource;
 use App\Domain\Quran\Models\QuranResource;
@@ -16,6 +17,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use InvalidArgumentException;
 
 final class EloquentResourceRepository implements ResourceRepositoryInterface
@@ -45,12 +47,30 @@ final class EloquentResourceRepository implements ResourceRepositoryInterface
             ->when(($filters['status'] ?? '') === 'active', fn (Builder $q) => $q->where('is_active', true))
             ->when(($filters['status'] ?? '') === 'inactive', fn (Builder $q) => $q->where('is_active', false))
             ->when(($filters['status'] ?? '') === 'sync', fn (Builder $q) => $q->where('sync_enabled', true))
+            ->when(($filters['status'] ?? '') === 'hidden', fn (Builder $q) => $q->where('metadata->hidden_by_admin', true))
             ->when(in_array($filters['source'] ?? '', ['qf', 'manual'], true), fn (Builder $q) => $q->where('source', $filters['source']))
-            ->orderByDesc('is_active')
-            ->orderBy('display_order')
-            ->orderBy('name')
+            ->when(in_array($filters['style'] ?? '', RecitationStyle::values(), true), fn (Builder $q) => $q->where('style', $filters['style']))
+            ->tap(fn (Builder $q) => $this->applyAdminSort($q, (string) ($filters['sort'] ?? 'name')))
             ->paginate(min(100, max(1, $perPage)))
             ->withQueryString();
+    }
+
+    /** @var list<string> */
+    public const ADMIN_SORTS = ['name', 'name_desc', 'records', 'synced', 'newest', 'order'];
+
+    private function applyAdminSort(Builder $query, string $sort): void
+    {
+        // Alphabetical uses the admin locale's translated name, falling back to the English name.
+        $localized = 'COALESCE((SELECT t.name FROM quran_resource_translations t WHERE t.resource_id = quran_resources.id AND t.locale = ? LIMIT 1), quran_resources.name)';
+
+        match ($sort) {
+            'name_desc' => $query->orderByRaw("{$localized} DESC", [app()->getLocale()]),
+            'records' => $query->orderByDesc('records_count')->orderBy('name'),
+            'synced' => $query->orderByDesc('last_synced_at')->orderBy('name'),
+            'newest' => $query->orderByDesc('id'),
+            'order' => $query->orderByDesc('is_active')->orderBy('display_order')->orderBy('name'),
+            default => $query->orderByRaw("{$localized} ASC", [app()->getLocale()]),
+        };
     }
 
     public function active(ResourceKind $kind, ?string $languageIso = null): Collection
@@ -179,24 +199,39 @@ final class EloquentResourceRepository implements ResourceRepositoryInterface
         });
     }
 
-    public function delete(int $id): bool
+    public function hide(int $id): QuranResource
     {
-        return DB::transaction(function () use ($id): bool {
+        return DB::transaction(function () use ($id): QuranResource {
+            $resource = QuranResource::query()->findOrFail($id);
+            $metadata = $resource->metadata ?? [];
+            $metadata['hidden_by_admin'] = true;
+            $resource->forceFill(['is_active' => false, 'is_default' => false, 'sync_enabled' => false, 'metadata' => $metadata])->save();
+
+            return $resource;
+        });
+    }
+
+    public function delete(int $id): void
+    {
+        DB::transaction(function () use ($id): void {
             $resource = QuranResource::query()->findOrFail($id);
 
-            if ($resource->isFromQf()) {
-                $metadata = $resource->metadata ?? [];
-                $metadata['hidden_by_admin'] = true;
-                $resource->forceFill(['is_active' => false, 'is_default' => false, 'sync_enabled' => false, 'metadata' => $metadata])->save();
-
-                return false;
+            // A reciter's recordings go with them; otherwise they would be orphaned as reciters.
+            foreach ([...$resource->recordings()->get(), $resource] as $row) {
+                $this->deleteFiles($row);
+                // FK cascades remove translations, tafsirs, chapter infos, audio and glosses.
+                $row->delete();
             }
-
-            // FK cascades remove its translations, tafsirs, audio and glosses.
-            $resource->delete();
-
-            return true;
         });
+    }
+
+    /**
+     * Locally stored audio (`quran/audio/{id}`); the portrait goes with the model's `deleted` hook.
+     */
+    private function deleteFiles(QuranResource $resource): void
+    {
+        Storage::disk((string) config('quran.audio.disk', 'public'))
+            ->deleteDirectory(trim((string) config('quran.audio.path', 'quran/audio'), '/').'/'.$resource->id);
     }
 
     public function toggle(int $id, string $field): QuranResource
@@ -215,6 +250,9 @@ final class EloquentResourceRepository implements ResourceRepositoryInterface
             }
             if ($field === 'is_active' && ! $value) {
                 $attributes['is_default'] = false;
+            }
+            if ($field === 'is_active' && $value && isset($resource->metadata['hidden_by_admin'])) {
+                $attributes['metadata'] = array_diff_key($resource->metadata, ['hidden_by_admin' => true]);
             }
             if ($field === 'sync_enabled' && $value && $resource->qf_id === null) {
                 throw new InvalidArgumentException('Only Quran Foundation resources can be synced.');
