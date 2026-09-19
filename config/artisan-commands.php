@@ -40,20 +40,18 @@ return [
             'commands' => [
                 // Quran Foundation import & sync (006). Reads QF production; writes only
                 // quran_* tables. Every step is idempotent and prints reconciled counts.
+                // The individual bootstrap steps stay CLI-only; `bootstrap` runs them all.
                 'quran:qf:doctor' => ['queued' => false],
                 'quran:qf:bootstrap' => ['queued' => true, 'danger' => true],
-                'quran:qf:import-structure' => ['queued' => true],
-                'quran:qf:import-verses' => ['queued' => true],
-                'quran:qf:import-words' => ['queued' => true],
                 'quran:qf:import-catalogue' => ['queued' => true, 'defaults' => ['--with-info' => true]],
                 'quran:qf:download-assets' => ['queued' => true, 'danger' => true],
+                // Manual-only: not on the scheduler. Also reachable from the sync dashboard.
                 'quran:qf:sync' => ['queued' => true],
-                'quran:qf:import-chapter-infos' => ['queued' => true],
-                'quran:qf:import-timestamps' => ['queued' => true],
                 'quran:reciter:fetch' => ['queued' => true],
                 'quran:reciter:images' => ['queued' => true, 'defaults' => ['--download' => true]],
-                // Manual-only (no longer scheduled). Queued because a first run
-                // after a long gap deletes in batches until the table is clear.
+                'quran:reciter:prune-images' => ['queued' => true],
+                // Manual-only. Queued because a first run after a long gap deletes in
+                // batches until the table is clear.
                 'quran:ai-prune' => ['queued' => true],
             ],
         ],
@@ -70,7 +68,6 @@ return [
             'icon' => 'users',
             'commands' => [
                 'muslims:import' => ['queued' => true],
-                'users:backfill-public-role' => [],
             ],
         ],
 
@@ -79,8 +76,7 @@ return [
             'commands' => [
                 'media:compute-trending' => [],
                 'media:publish-scheduled' => [],
-                // Manual-only (no longer scheduled). Queued: the delete loop
-                // runs until the backlog is clear, which can be many batches.
+                // Manual-only. Queued: the delete loop runs until the backlog is clear.
                 'media:prune-view-events' => ['queued' => true],
             ],
         ],
@@ -110,17 +106,14 @@ return [
             // Queue workers run as ${DEPLOY_USER} (see supervisor-worker.conf), which can
             // read .env, so the same command is safe there — and the CommandRun row gives
             // the operator progress instead of a hung request.
+            //
+            // `optimize` / `optimize:clear` cover config, routes, views and events, so
+            // the per-cache variants are not listed.
             'commands' => [
                 'optimize' => ['queued' => true],
                 'optimize:clear' => ['queued' => true],
                 'cache:clear' => ['queued' => true],
-                'config:cache' => ['queued' => true],
-                'config:clear' => ['queued' => true],
-                'route:cache' => ['queued' => true],
-                'route:clear' => ['queued' => true],
-                'view:cache' => ['queued' => true],
                 'view:clear' => ['queued' => true],
-                'event:clear' => ['queued' => true],
             ],
         ],
 
@@ -128,19 +121,17 @@ return [
             'icon' => 'server-cog',
             'commands' => [
                 'about' => [],
-                'storage:link' => [],
                 // Queued without exception: the production database is ~470 MB and
                 // an inline run dies on max_execution_time part-way through writing
                 // the archive, leaving a truncated file that looks like a backup.
                 'db:dump' => ['queued' => true],
-                // Runs nightly on its own; exposed here for an on-demand prune.
+                // Runs every 72 hours on its own; exposed here for an on-demand prune.
                 'admin-logs:prune' => ['queued' => true],
                 'migrate:status' => [],
                 'migrate' => ['danger' => true, 'defaults' => ['--force' => true]],
                 'schedule:list' => [],
                 'queue:failed' => [],
                 'queue:retry' => [],
-                'queue:prune-failed' => [],
                 'queue:restart' => [],
             ],
         ],

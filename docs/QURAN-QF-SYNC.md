@@ -68,7 +68,7 @@ Two rules matter:
 Each run writes a `quran_sync_runs` row with what it applied, what it skipped and any errors.
 The admin sync dashboard reads those two tables; `--bootstrap` starts a filter from scratch.
 
-The scheduler runs the sync nightly. The catalogue import is worth running every so often so
+The sync is not scheduled: run it from the Quran sync dashboard or Settings → Commands. The catalogue import is worth running every so often so
 newly published QF resources appear in the admin list as available to enable.
 
 ## Reciters

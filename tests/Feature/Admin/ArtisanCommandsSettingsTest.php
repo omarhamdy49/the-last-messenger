@@ -260,13 +260,13 @@ final class ArtisanCommandsSettingsTest extends TestCase
 
     public function test_the_retention_commands_are_manual_only(): void
     {
-        // Both prunes were taken off the scheduler on purpose: they delete rows,
-        // so they run when someone decides to, from the settings tab.
+        // The prunes and the QF sync were taken off the scheduler on purpose: they
+        // delete or rewrite rows, so they run when someone decides to, from the settings tab.
         $scheduled = collect(app(Schedule::class)->events())
             ->map(fn ($event): string => (string) $event->command)
             ->all();
 
-        foreach (['quran:ai-prune', 'media:prune-view-events'] as $command) {
+        foreach (['quran:ai-prune', 'media:prune-view-events', 'quran:reciter:prune-images', 'quran:qf:sync'] as $command) {
             $this->assertEmpty(
                 array_filter($scheduled, fn (string $c): bool => str_contains($c, $command)),
                 "{$command} must not be scheduled.",

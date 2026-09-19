@@ -89,7 +89,6 @@ return [
 
     'sync' => [
         'per_page' => 100,
-        'schedule' => '03:15',
     ],
 
     // Ceiling for any API `per_page` parameter (matches QF).

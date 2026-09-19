@@ -50,10 +50,10 @@ Artisan::command('content:process-scheduled', function () {
 })->purpose('Process scheduled content for publishing');
 
 /**
- * Schedule the content processor to run every 5 minutes
+ * Schedule the content processor to run every 30 minutes
  */
 Schedule::command('content:process-scheduled')
-    ->everyFiveMinutes()
+    ->everyThirtyMinutes()
     ->withoutOverlapping()
     ->runInBackground()
     ->onSuccess(function () {
@@ -65,10 +65,10 @@ Schedule::command('content:process-scheduled')
 
 /**
  * Publish media programs whose scheduled publish_at has passed.
- * Runs hourly.
+ * Runs every 30 minutes.
  */
 Schedule::command('media:publish-scheduled')
-    ->hourly()
+    ->everyThirtyMinutes()
     ->withoutOverlapping()
     ->runInBackground()
     ->onFailure(function () {
@@ -77,10 +77,10 @@ Schedule::command('media:publish-scheduled')
 
 /**
  * Publish articles whose scheduled publish time has passed (status scheduled → published).
- * Runs every minute so scheduled articles go live close to their chosen time.
+ * Runs every 30 minutes.
  */
 Schedule::command('articles:publish-scheduled')
-    ->everyMinute()
+    ->everyThirtyMinutes()
     ->withoutOverlapping()
     ->runInBackground()
     ->onFailure(function () {
@@ -116,8 +116,8 @@ Artisan::command('media:prune-view-events', function () {
  * Logs). Every admin write appends a row with old/new value snapshots, so the
  * table grows with editing activity and nothing else trims it.
  *
- * Scheduled nightly. Batched like the view-event prune so a large backlog never
- * holds one long transaction while the admin panel is still writing to it.
+ * Scheduled every 72 hours. Batched like the view-event prune so a large backlog
+ * never holds one long transaction while the admin panel is still writing to it.
  */
 Artisan::command('admin-logs:prune {--days=7 : Keep logs newer than N days}', function () {
     $cutoff = now()->subDays(max(1, (int) $this->option('days')));
@@ -137,7 +137,7 @@ Artisan::command('admin-logs:prune {--days=7 : Keep logs newer than N days}', fu
 })->purpose('Prune admin activity logs older than 7 days');
 
 Schedule::command('admin-logs:prune')
-    ->dailyAt('03:30')
+    ->cron('30 3 */3 * *')
     ->withoutOverlapping()
     ->runInBackground()
     ->onFailure(function () {
@@ -161,15 +161,6 @@ Schedule::command('media:compute-trending')
 // quran:ai-prune (prunes Ask Quran inquiries + stale quota rows) is manual-only
 // too — see Settings → Commands. It takes --dry-run, so preview before deleting.
 
-/**
- * Quran Foundation Content Sync (006): applies only changes since the last run for
- * every enabled translation, tafsir, word-by-word resource and active mushaf. The
- * sync token only advances after a fully applied run, so a failed night repeats.
- */
-Schedule::command('quran:qf:sync')
-    ->dailyAt((string) config('quran.sync.schedule', '03:15'))
-    ->withoutOverlapping(120)
-    ->runInBackground()
-    ->onFailure(function () {
-        Log::error('Quran Foundation content sync failed; see quran_sync_runs');
-    });
+// quran:qf:sync is manual-only as well: run it from the Quran sync dashboard or
+// Settings → Commands. The sync token only advances after a fully applied run,
+// so a failed run simply repeats next time.

@@ -209,7 +209,7 @@ final class QuranAdminTest extends TestCase
         $this->put(route('admin.quran.resources.update', $resource->id), $payload + ['image_url' => 'https://cdn.example.com/new.webp'])->assertRedirect();
         Storage::disk('public')->assertMissing('quran/reciters/old.jpeg');
         Storage::disk('public')->assertExists('quran/reciters/orphan.jpeg');
-        $this->artisan('quran:reciter:images', ['--prune' => true])->assertSuccessful();
+        $this->artisan('quran:reciter:prune-images')->assertSuccessful();
         Storage::disk('public')->assertMissing('quran/reciters/orphan.jpeg');
         $this->get(route('admin.quran.resources.create', 'chapter_reciters'))->assertOk()->assertSee('data-wizard-step="source"', false);
     }
