@@ -921,6 +921,8 @@ return [
         'totals_plays' => 'مرة استماع',
         'step_reciters' => 'القرّاء',
         'step_scope' => 'النطاق',
+        'edit_reciters' => 'إضافة أو تغيير القرّاء',
+        'edit_scope' => 'تعديل السور',
         'step_preview' => 'المعاينة',
         'name' => 'اسم القائمة',
         'name_help' => 'من حرفين إلى ٨٠ حرفًا',

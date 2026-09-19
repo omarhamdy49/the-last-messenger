@@ -700,6 +700,8 @@ return [
         'totals_plays' => 'plays',
         'step_reciters' => 'Reciters',
         'step_scope' => 'Scope',
+        'edit_reciters' => 'Add or change reciters',
+        'edit_scope' => 'Edit surahs',
         'step_preview' => 'Preview',
         'name' => 'Playlist name',
         'name_help' => '2 to 80 characters',

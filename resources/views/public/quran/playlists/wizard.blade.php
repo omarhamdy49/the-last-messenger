@@ -201,11 +201,23 @@
                 <p class="text-sm font-semibold text-zinc-800 dark:text-zinc-100" x-text="coverageText()"></p>
                 <p class="text-xs text-zinc-500 dark:text-zinc-400" x-show="uncovered.length" x-text="`${fmt(uncovered.length)} ×`"></p>
             </div>
-            <button type="button" @click="preview(true)" :disabled="loading"
-                    class="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-full text-sm font-semibold border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 hover:border-zinc-400 active:scale-[0.98] disabled:opacity-50 transition">
-                <i data-lucide="shuffle" class="w-4 h-4" :class="loading ? 'animate-spin' : ''"></i>
-                {{ __('quran.playlists.reshuffle') }}
-            </button>
+            <div class="flex flex-wrap items-center gap-2">
+                <button type="button" @click="goTo(1)"
+                        class="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-full text-sm font-semibold border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 hover:border-zinc-400 active:scale-[0.98] transition">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i>
+                    {{ __('quran.playlists.edit_reciters') }}
+                </button>
+                <button type="button" @click="goTo(2)"
+                        class="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-full text-sm font-semibold border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 hover:border-zinc-400 active:scale-[0.98] transition">
+                    <i data-lucide="list-checks" class="w-4 h-4"></i>
+                    {{ __('quran.playlists.edit_scope') }}
+                </button>
+                <button type="button" @click="preview(true)" :disabled="loading"
+                        class="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-full text-sm font-semibold border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-100 hover:border-zinc-400 active:scale-[0.98] disabled:opacity-50 transition">
+                    <i data-lucide="shuffle" class="w-4 h-4" :class="loading ? 'animate-spin' : ''"></i>
+                    {{ __('quran.playlists.reshuffle') }}
+                </button>
+            </div>
         </div>
 
         {{-- Skeleton --}}
@@ -292,8 +304,8 @@
                     <button type="button" role="switch" :aria-checked="isPublic" @click="isPublic = !isPublic; dirty = true"
                             class="relative w-12 h-7 rounded-full transition-colors shrink-0"
                             :class="isPublic ? 'bg-secondary' : 'bg-zinc-300 dark:bg-zinc-700'">
-                        <span class="absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-transform"
-                              :class="isPublic ? '{{ $isRtl ? '-translate-x-6 end-1' : 'translate-x-6 start-1' }}' : '{{ $isRtl ? 'end-1' : 'start-1' }}'"></span>
+                        <span class="absolute top-1 start-1 w-5 h-5 rounded-full bg-white shadow ring-1 ring-black/10 transition-transform"
+                              :class="isPublic ? 'ltr:translate-x-5 rtl:-translate-x-5' : ''"></span>
                     </button>
                     <span class="flex flex-col leading-tight">
                         <span class="font-semibold text-zinc-800 dark:text-zinc-100">{{ __('quran.playlists.public_toggle') }}</span>
