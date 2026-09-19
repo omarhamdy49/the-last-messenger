@@ -82,6 +82,12 @@ fi
 rm -rf "${RELEASE}/storage"
 ln -nfs "${SHARED_DIR}/storage" "${RELEASE}/storage"
 
+# Quran mushaf fonts (public/fonts/quran, 142 MB) are git-ignored and not in the
+# artifact; they live in shared/fonts/quran so a release does not lose them.
+mkdir -p "${SHARED_DIR}/fonts/quran" "${RELEASE}/public/fonts"
+rm -rf "${RELEASE}/public/fonts/quran"
+ln -nfs "${SHARED_DIR}/fonts/quran" "${RELEASE}/public/fonts/quran"
+
 cd "${RELEASE}"
 
 # .env drift check. Stage 75 writes shared/.env only if it does not already exist, so every
