@@ -61,7 +61,7 @@ Route::prefix('/quran/playlists/{slug}')->where(['slug' => '[a-z0-9]{12}'])->con
     Route::get('/', 'show')->name('public.quran.playlists.show');
     Route::post('/plays', 'plays')->middleware('throttle:10,1')->name('public.quran.playlists.plays');
     // Heavy: proxies every track through this process, so it is throttled and tied to a user.
-    Route::get('/download', 'download')->middleware(['auth', 'throttle:2,10'])->name('public.quran.playlists.download');
+    Route::get('/download', 'download')->middleware(['auth', 'throttle:6,10'])->name('public.quran.playlists.download');
     Route::middleware('auth')->group(function (): void {
         Route::get('/edit', 'edit')->name('public.quran.playlists.edit');
         Route::put('/', 'update')->name('public.quran.playlists.update');
